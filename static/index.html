@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Analyzer — 拍照上传</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-logo">📸 Photo Analyzer</div>
+    <nav class="header-nav">
+      <a href="/admin.html">🔒 Admin</a>
+    </nav>
+  </header>
+
+  <main class="camera-page">
+    <h1>📷 拍照上传</h1>
+    <p class="subtitle">打开相机，拍摄照片，上传至服务器供 AI 分析</p>
+
+    <!-- Camera preview / Photo preview -->
+    <div class="camera-container" id="camera-container">
+      <video id="camera-feed" autoplay playsinline muted></video>
+      <img id="photo-preview" alt="Captured photo">
+    </div>
+
+    <!-- Camera controls -->
+    <div class="camera-controls">
+      <button class="btn btn-primary btn-lg" id="btn-capture">📸 拍照</button>
+      <button class="btn btn-outline btn-lg hidden" id="btn-retake">🔄 重新拍照</button>
+      <button class="btn btn-success btn-lg hidden" id="btn-upload">☁️ 上传照片</button>
+      <button class="btn btn-outline btn-lg hidden" id="btn-switch-camera">🔁 切换摄像头</button>
+    </div>
+
+    <!-- Status message -->
+    <div class="status-message" id="status-message"></div>
+
+    <!-- Loading indicator -->
+    <div class="status-message info" id="upload-loading" style="display:none;">
+      <span class="spinner spinner-dark"></span> 正在上传中...
+    </div>
+
+    <!-- File upload fallback -->
+    <div class="file-upload-area" id="file-upload-area">
+      <div class="icon">📁</div>
+      <p>相机不可用？</p>
+      <p style="font-size:0.85rem;">点击此处或拖拽图片文件上传</p>
+      <input type="file" id="file-input" accept="image/jpeg,image/png" style="display:none;">
+    </div>
+  </main>
+
+  <script src="/js/camera.js"></script>
+</body>
+</html>

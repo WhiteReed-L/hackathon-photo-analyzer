@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Photo Analyzer</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Login View -->
+  <div id="login-page" class="login-page">
+    <div class="login-card">
+      <h1>🔒 Admin Login</h1>
+      <p class="subtitle">请输入管理密码以访问后台</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input type="password" id="password" placeholder="输入管理密码" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">登录</button>
+      </form>
+      <div class="status-message" id="login-status" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="admin-dashboard" class="hidden">
+    <header class="header">
+      <div class="header-logo">📸 Admin Dashboard</div>
+      <nav class="header-nav">
+        <a href="/">📷 用户拍照页</a>
+        <a href="#" id="btn-logout" class="btn btn-outline" style="font-size:0.85rem;">退出登录</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="gallery-header">
+        <div>
+          <h2>📋 照片画廊</h2>
+          <p class="gallery-stats" id="gallery-stats">加载中...</p>
+        </div>
+        <button class="btn btn-outline" id="btn-refresh">🔄 刷新</button>
+      </div>
+
+      <div class="gallery-grid" id="gallery-grid">
+        <!-- Photo cards rendered here -->
+      </div>
+
+      <div class="empty-state hidden" id="empty-state">
+        <div class="icon">📭</div>
+        <h3>还没有照片</h3>
+        <p>等待用户拍照上传...</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Photo Detail Modal -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-image">
+          <img id="modal-image" src="" alt="Photo detail">
+        </div>
+        <div class="modal-info">
+          <h3 id="modal-title">照片详情</h3>
+          <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:12px;">
+            <span id="modal-meta"></span>
+          </p>
+          <div id="modal-analysis" class="analysis-section">
+            <div class="analysis-placeholder">
+              <p>📝 尚未分析</p>
+              <p style="font-size:0.85rem;color:var(--text-secondary);">点击下方按钮使用 AI 分析此照片</p>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-primary" id="btn-analyze">
+              🤖 AI 分析
+            </button>
+            <button class="btn btn-outline" id="btn-close-modal">
+              关闭
+            </button>
+          </div>
+          <div class="status-message" id="modal-status" style="margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
