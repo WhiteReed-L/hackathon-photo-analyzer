@@ -27,6 +27,7 @@ async def sync_conversations(
             role=entry.get("role", "user"),
             text=entry.get("text"),
             image_url=entry.get("image_url"),
+            clothing_tags=entry.get("clothing_tags"),
             style_tags=entry.get("style_tags"),
             scene_tags=entry.get("scene_tags"),
         )

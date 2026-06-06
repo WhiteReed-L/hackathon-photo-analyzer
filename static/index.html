@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>穿搭AI助手</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,18 +14,18 @@
 <!-- ═══ SIDEBAR (visible after login) ═══ -->
 <nav id="sidebar" class="sidebar hidden">
   <div class="sidebar-header">
-    <div class="sidebar-brand" id="sidebar-home">👗 穿搭AI助手</div>
+    <div class="sidebar-brand" id="sidebar-home">穿搭AI</div>
     <button class="sidebar-toggle" id="sidebar-toggle" title="收起/展开侧栏">◀</button>
   </div>
   <div class="sidebar-divider"></div>
   <div class="sidebar-body">
-    <a class="sidebar-item" data-nav="path-a">👔 我知道想穿什么</a>
-    <a class="sidebar-item" data-nav="path-b">💭 我有一些想法</a>
+    <a class="sidebar-item" data-nav="path-a">直接搭配</a>
+    <a class="sidebar-item" data-nav="path-b">灵感探索</a>
     <div class="sidebar-divider"></div>
-    <a class="sidebar-item" data-nav="result-a">🖼️ 直接搭配结果</a>
-    <a class="sidebar-item" data-nav="result-b">🖼️ 灵感搭配结果</a>
+    <a class="sidebar-item" data-nav="result-a">搭配结果 A</a>
+    <a class="sidebar-item" data-nav="result-b">搭配结果 B</a>
     <div class="sidebar-divider"></div>
-    <a class="sidebar-item sidebar-logout" id="sidebar-logout">🚪 退出登录</a>
+    <a class="sidebar-item sidebar-logout" id="sidebar-logout">退出登录</a>
   </div>
 </nav>
 
@@ -32,8 +35,8 @@
 <!-- ═══ VIEW: Login/Register ═══ -->
 <div id="view-login" class="login-page">
   <div class="login-card">
-    <h1>👗 穿搭AI助手</h1>
-    <p class="subtitle" id="login-subtitle">登录或注册账号</p>
+    <h1>穿搭AI助手</h1>
+    <p class="subtitle" id="login-subtitle">登录开始你的风格探索</p>
 
     <!-- Tabs -->
     <div class="tab-bar">
@@ -52,7 +55,7 @@
         <input type="password" id="login-password" placeholder="输入密码" required>
       </div>
       <div id="login-status" class="status-message"></div>
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">登录</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;">登录</button>
     </form>
 
     <!-- Register form -->
@@ -90,7 +93,7 @@
         </div>
       </div>
       <div id="reg-status" class="status-message"></div>
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">注册</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;">注册</button>
     </form>
   </div>
 </div>
@@ -98,25 +101,25 @@
 <!-- ═══ VIEW: Home (path selection) ═══ -->
 <div id="view-home" class="hidden container">
   <header class="header">
-    <div class="header-logo">👗 穿搭AI助手</div>
+    <div class="header-logo">穿搭AI助手</div>
     <nav class="header-nav">
-      <span id="home-nickname" style="color:var(--text-secondary);margin-right:12px;"></span>
-      <a href="#" id="btn-logout" class="btn btn-outline" style="font-size:0.85rem;">退出</a>
+      <span id="home-nickname" style="color:var(--ink-muted-48);font-size:14px;margin-right:8px;"></span>
+      <a href="#" id="btn-logout" class="btn btn-sm btn-secondary">退出</a>
     </nav>
   </header>
-  <main style="max-width:720px;margin:80px auto;text-align:center;padding:0 20px;">
-    <h1 style="font-size:2rem;margin-bottom:12px;">今天想穿什么？</h1>
-    <p style="color:var(--text-secondary);margin-bottom:48px;">告诉我你的想法，我来帮你搭配</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+  <main style="max-width:680px;margin:80px auto;text-align:center;padding:0 var(--space-lg);">
+    <h1 class="display-md" style="margin-bottom:12px;">今天想穿什么？</h1>
+    <p style="color:var(--ink-muted-48);font-size:17px;margin-bottom:var(--space-xxl);">告诉我你的想法，我来帮你搭配</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);">
       <div class="path-card" id="btn-path-a">
         <div class="path-icon">👔</div>
-        <h2>我知道想穿什么</h2>
-        <p>上传参考图片或拍照，描述你想要的搭配</p>
+        <h2>直接搭配</h2>
+        <p>上传参考图片，描述你想要的搭配风格</p>
       </div>
       <div class="path-card" id="btn-path-b">
-        <div class="path-icon">💭</div>
-        <h2>我有一些想法</h2>
-        <p>选择风格和场景标签，让我帮你找到灵感</p>
+        <div class="path-icon">✨</div>
+        <h2>灵感探索</h2>
+        <p>选择风格和场景标签，让AI为你找到灵感</p>
       </div>
     </div>
   </main>
@@ -125,30 +128,30 @@
 <!-- ═══ VIEW: Path A — user photo + outfit reference + text ═══ -->
 <div id="view-path-a" class="hidden">
   <header class="header">
-    <div class="header-logo">👔 我知道想穿什么</div>
-    <nav class="header-nav"><a href="#" class="btn-back">← 返回主页</a></nav>
+    <div class="header-logo">直接搭配</div>
+    <nav class="header-nav"><a href="#" class="btn-back">返回</a></nav>
   </header>
   <main class="camera-page">
     <!-- Upload 1: User's own photo -->
-    <div style="margin-bottom:40px;">
-      <h1>📷 上传你的照片</h1>
-      <p class="subtitle">拍一张你自己的全身或半身照，方便AI根据你的身材搭配</p>
+    <div style="margin-bottom:var(--space-xxl);">
+      <h1>上传你的照片</h1>
+      <p class="subtitle">拍一张全身或半身照，AI将根据你的身材特征搭配</p>
       <div class="camera-container">
         <img id="photo-preview-a1" alt="预览" style="display:none;">
       </div>
       <input type="file" id="capture-input-a1" accept="image/*" capture="environment" style="display:none;">
       <input type="file" id="file-input-a1" accept="image/*" style="display:none;">
       <div class="camera-controls">
-        <button class="btn btn-primary btn-lg" id="btn-capture-a1">📸 拍照</button>
-        <button class="btn btn-outline btn-lg hidden" id="btn-retake-a1">🔄 重拍</button>
-        <button class="btn btn-outline btn-lg" id="btn-file-a1">📁 选择文件</button>
-        <button class="btn btn-outline btn-lg" id="btn-skip-a1">⏭️ 跳过</button>
+        <button class="btn btn-primary" id="btn-capture-a1">拍照</button>
+        <button class="btn btn-outline hidden" id="btn-retake-a1">重拍</button>
+        <button class="btn btn-outline" id="btn-file-a1">选择文件</button>
+        <button class="btn btn-secondary" id="btn-skip-a1">跳过</button>
       </div>
     </div>
 
     <!-- Upload 2: Outfit reference -->
-    <div style="margin-bottom:24px;">
-      <h1>👗 上传服装参考图</h1>
+    <div style="margin-bottom:var(--space-xl);">
+      <h1>服装参考图</h1>
       <p class="subtitle">上传你喜欢的穿搭风格参考（可选）</p>
       <div class="camera-container">
         <img id="photo-preview-a2" alt="预览" style="display:none;">
@@ -156,20 +159,20 @@
       <input type="file" id="capture-input-a2" accept="image/*" capture="environment" style="display:none;">
       <input type="file" id="file-input-a2" accept="image/*" style="display:none;">
       <div class="camera-controls">
-        <button class="btn btn-primary btn-lg" id="btn-capture-a2">📸 拍照</button>
-        <button class="btn btn-outline btn-lg hidden" id="btn-retake-a2">🔄 重拍</button>
-        <button class="btn btn-outline btn-lg" id="btn-file-a2">📁 选择文件</button>
-        <button class="btn btn-outline btn-lg" id="btn-skip-a2">⏭️ 跳过</button>
+        <button class="btn btn-primary" id="btn-capture-a2">拍照</button>
+        <button class="btn btn-outline hidden" id="btn-retake-a2">重拍</button>
+        <button class="btn btn-outline" id="btn-file-a2">选择文件</button>
+        <button class="btn btn-secondary" id="btn-skip-a2">跳过</button>
       </div>
     </div>
 
-    <div class="form-group" style="margin-top:24px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;">描述你想要的搭配</label>
-      <textarea id="text-a" class="text-input" rows="3" placeholder="例如：我想要一套简约通勤风格的搭配，浅色系..."></textarea>
+    <div class="form-group" style="margin-top:var(--space-xl);">
+      <label>描述你想要的搭配</label>
+      <textarea id="text-a" class="text-input" rows="3" placeholder="例如：简约通勤风格，浅色系，适合初夏..."></textarea>
     </div>
 
-    <div style="text-align:center;margin-top:20px;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-a">✨ 生成搭配</button>
+    <div style="text-align:center;margin-top:var(--space-xl);">
+      <button class="btn btn-primary btn-lg" id="btn-generate-a">生成搭配</button>
     </div>
     <div id="status-a" class="status-message"></div>
   </main>
@@ -178,11 +181,11 @@
 <!-- ═══ VIEW: Path B — upload + tags + single text ═══ -->
 <div id="view-path-b" class="hidden">
   <header class="header">
-    <div class="header-logo">💭 我有一些想法</div>
-    <nav class="header-nav"><a href="#" class="btn-back">← 返回主页</a></nav>
+    <div class="header-logo">灵感探索</div>
+    <nav class="header-nav"><a href="#" class="btn-back">返回</a></nav>
   </header>
   <main class="camera-page">
-    <h1>📷 上传参考图片</h1>
+    <h1>上传参考图片</h1>
     <p class="subtitle">可选：拍一张或上传参考图</p>
 
     <div class="camera-container">
@@ -191,36 +194,36 @@
     <input type="file" id="capture-input-b" accept="image/*" capture="environment" style="display:none;">
     <input type="file" id="file-input-b" accept="image/*" style="display:none;">
     <div class="camera-controls">
-      <button class="btn btn-primary btn-lg" id="btn-capture-b">📸 拍照</button>
-      <button class="btn btn-outline btn-lg hidden" id="btn-retake-b">🔄 重拍</button>
-      <button class="btn btn-outline btn-lg" id="btn-file-b">📁 选择文件</button>
-      <button class="btn btn-outline btn-lg" id="btn-skip-b">⏭️ 跳过</button>
+      <button class="btn btn-primary" id="btn-capture-b">拍照</button>
+      <button class="btn btn-outline hidden" id="btn-retake-b">重拍</button>
+      <button class="btn btn-outline" id="btn-file-b">选择文件</button>
+      <button class="btn btn-secondary" id="btn-skip-b">跳过</button>
     </div>
 
     <!-- Unified text input -->
-    <div class="form-group" style="margin-top:32px;">
-      <label style="display:block;margin-bottom:8px;font-weight:600;">📋 告诉我你的想法</label>
-      <textarea class="text-input" id="text-b" rows="3" placeholder="描述你的穿搭需求：想要什么类型的衣服、喜欢的风格、什么场合穿..."></textarea>
+    <div class="form-group" style="margin-top:var(--space-xl);">
+      <label>告诉我你的想法</label>
+      <textarea class="text-input" id="text-b" rows="3" placeholder="描述你的穿搭需求：想要什么类型、喜欢的风格、什么场合..."></textarea>
     </div>
 
     <!-- Tag sections -->
     <div class="tag-section">
-      <h3 class="tag-section-title">👚 衣服款式（可多选）</h3>
+      <h3 class="tag-section-title">衣服款式</h3>
       <div class="tag-grid" id="clothing-type-tags"></div>
     </div>
 
     <div class="tag-section">
-      <h3 class="tag-section-title">💭 风格偏好（可多选）</h3>
+      <h3 class="tag-section-title">风格偏好</h3>
       <div class="tag-grid" id="style-tags"></div>
     </div>
 
     <div class="tag-section">
-      <h3 class="tag-section-title">🎯 穿着场景（可多选）</h3>
+      <h3 class="tag-section-title">穿着场景</h3>
       <div class="tag-grid" id="scene-tags"></div>
     </div>
 
-    <div style="text-align:center;margin-top:32px;">
-      <button class="btn btn-primary btn-lg" id="btn-generate-b">✨ 生成搭配</button>
+    <div style="text-align:center;margin-top:var(--space-xl);">
+      <button class="btn btn-primary btn-lg" id="btn-generate-b">生成搭配</button>
     </div>
     <div id="status-b" class="status-message"></div>
   </main>
@@ -229,15 +232,17 @@
 <!-- ═══ VIEW: Result + conversation ═══ -->
 <div id="view-result" class="hidden">
   <header class="header">
-    <div class="header-logo">✨ 搭配结果</div>
-    <nav class="header-nav"><a href="#" class="btn-back-home">← 返回主页</a></nav>
+    <div class="header-logo">搭配结果</div>
+    <nav class="header-nav"><a href="#" class="btn-back-home">返回</a></nav>
   </header>
   <main class="container" style="max-width:960px;margin:40px auto;">
     <div class="result-layout">
       <div class="result-image">
-        <img id="result-img" src="" alt="AI生成搭配图" style="width:100%;border-radius:var(--radius);">
-        <button class="btn btn-outline" id="btn-save" style="margin-top:12px;width:100%;">💾 保存图片</button>
-        <button class="btn btn-primary" id="btn-retry" style="margin-top:8px;width:100%;">🔄 不满意？再试试</button>
+        <img id="result-img" src="" alt="AI生成搭配图">
+        <div style="display:flex;gap:8px;margin-top:var(--space-sm);">
+          <button class="btn btn-outline" id="btn-save" style="flex:1;">保存图片</button>
+          <button class="btn btn-primary" id="btn-retry" style="flex:1;">再试一次</button>
+        </div>
       </div>
       <div class="result-chat">
         <div class="chat-messages" id="chat-messages"></div>
@@ -254,9 +259,9 @@
 <!-- ═══ Generate loading overlay ═══ -->
 <div id="loading-overlay" class="modal-overlay hidden">
   <div class="loading-card">
-    <div class="spinner spinner-dark" style="width:40px;height:40px;border-width:4px;margin:0 auto 16px;"></div>
-    <p style="text-align:center;font-weight:600;">AI 正在为你生成搭配...</p>
-    <p style="text-align:center;color:var(--text-secondary);font-size:0.85rem;">预计需要 10-30 秒</p>
+    <div class="spinner spinner-dark" style="width:36px;height:36px;border-width:3px;margin:0 auto 20px;"></div>
+    <p>AI 正在为你搭配...</p>
+    <p>预计需要 10-30 秒</p>
   </div>
 </div>
 
