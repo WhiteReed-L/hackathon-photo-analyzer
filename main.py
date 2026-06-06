@@ -6,38 +6,47 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 import config
-from database import init_db
-from routes import auth, upload, admin
+from database import close_db, init_db
+from limiter import limiter
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: initialize database and upload directory."""
     await init_db()
     config.UPLOAD_DIR.mkdir(exist_ok=True)
     yield
+    await close_db()
 
 
 app = FastAPI(
-    title="Hackathon Photo Analyzer",
-    description="Capture photos from camera and analyze them with AI",
-    version="1.0.0",
+    title="Fashion AI Assistant",
+    description="AI-powered fashion outfit generator",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# --- API Routes ---
-app.include_router(auth.router, prefix="/api", tags=["Auth"])
-app.include_router(upload.router, prefix="/api", tags=["Upload"])
-app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
-# --- Static file mounts (order matters: /api/uploads before /) ---
+# ── API Routes ──────────────────────────────────────────────────────
+from routes import conversations, generate, upload, user
+
+app.include_router(user.router, prefix="/api", tags=["User"])
+app.include_router(upload.router, prefix="/api", tags=["Upload"])
+app.include_router(generate.router, prefix="/api", tags=["Generate"])
+app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
+
+# ── Static file mounts (order matters) ──────────────────────────────
 config.UPLOAD_DIR.mkdir(exist_ok=True)
 app.mount(
     "/api/uploads",
     StaticFiles(directory=str(config.UPLOAD_DIR)),
     name="uploads",
 )
-
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
