@@ -8,6 +8,27 @@
 </head>
 <body>
 
+<!-- ═══ SIDEBAR (visible after login) ═══ -->
+<nav id="sidebar" class="sidebar hidden">
+  <div class="sidebar-header">
+    <div class="sidebar-brand" id="sidebar-home">👗 穿搭AI助手</div>
+    <button class="sidebar-toggle" id="sidebar-toggle" title="收起/展开侧栏">◀</button>
+  </div>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-body">
+    <a class="sidebar-item" data-nav="path-a">👔 我知道想穿什么</a>
+    <a class="sidebar-item" data-nav="path-b">💭 我有一些想法</a>
+    <div class="sidebar-divider"></div>
+    <a class="sidebar-item" data-nav="result-a">🖼️ 直接搭配结果</a>
+    <a class="sidebar-item" data-nav="result-b">🖼️ 灵感搭配结果</a>
+    <div class="sidebar-divider"></div>
+    <a class="sidebar-item sidebar-logout" id="sidebar-logout">🚪 退出登录</a>
+  </div>
+</nav>
+
+<!-- ═══ Main content wrapper ═══ -->
+<div id="main-content">
+
 <!-- ═══ VIEW: Login/Register ═══ -->
 <div id="view-login" class="login-page">
   <div class="login-card">
@@ -46,12 +67,12 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>身高 (cm) <span class="required">*</span></label>
-          <input type="number" id="reg-height" placeholder="170" step="0.1" required>
+          <label>身高 (cm)</label>
+          <input type="number" id="reg-height" placeholder="选填" step="0.1">
         </div>
         <div class="form-group">
-          <label>体重 (kg) <span class="required">*</span></label>
-          <input type="number" id="reg-weight" placeholder="60" step="0.1" required>
+          <label>体重 (kg)</label>
+          <input type="number" id="reg-weight" placeholder="选填" step="0.1">
         </div>
       </div>
       <div class="form-row form-row-3">
@@ -101,26 +122,45 @@
   </main>
 </div>
 
-<!-- ═══ VIEW: Path A — upload reference image + text ═══ -->
+<!-- ═══ VIEW: Path A — user photo + outfit reference + text ═══ -->
 <div id="view-path-a" class="hidden">
   <header class="header">
     <div class="header-logo">👔 我知道想穿什么</div>
     <nav class="header-nav"><a href="#" class="btn-back">← 返回主页</a></nav>
   </header>
   <main class="camera-page">
-    <h1>上传参考图片</h1>
-    <p class="subtitle">拍一张照片或上传你喜欢的风格参考</p>
-
-    <div class="camera-container" id="camera-container-a">
-      <video id="camera-feed-a" autoplay playsinline muted></video>
-      <img id="photo-preview-a" alt="Preview">
+    <!-- Upload 1: User's own photo -->
+    <div style="margin-bottom:40px;">
+      <h1>📷 上传你的照片</h1>
+      <p class="subtitle">拍一张你自己的全身或半身照，方便AI根据你的身材搭配</p>
+      <div class="camera-container">
+        <img id="photo-preview-a1" alt="预览" style="display:none;">
+      </div>
+      <input type="file" id="capture-input-a1" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="file-input-a1" accept="image/*" style="display:none;">
+      <div class="camera-controls">
+        <button class="btn btn-primary btn-lg" id="btn-capture-a1">📸 拍照</button>
+        <button class="btn btn-outline btn-lg hidden" id="btn-retake-a1">🔄 重拍</button>
+        <button class="btn btn-outline btn-lg" id="btn-file-a1">📁 选择文件</button>
+        <button class="btn btn-outline btn-lg" id="btn-skip-a1">⏭️ 跳过</button>
+      </div>
     </div>
-    <input type="file" id="file-input-a" accept="image/jpeg,image/png" style="display:none;">
 
-    <div class="camera-controls">
-      <button class="btn btn-primary btn-lg" id="btn-capture-a">📸 拍照</button>
-      <button class="btn btn-outline btn-lg hidden" id="btn-retake-a">🔄 重拍</button>
-      <button class="btn btn-outline btn-lg" id="btn-file-a">📁 选择文件</button>
+    <!-- Upload 2: Outfit reference -->
+    <div style="margin-bottom:24px;">
+      <h1>👗 上传服装参考图</h1>
+      <p class="subtitle">上传你喜欢的穿搭风格参考（可选）</p>
+      <div class="camera-container">
+        <img id="photo-preview-a2" alt="预览" style="display:none;">
+      </div>
+      <input type="file" id="capture-input-a2" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="file-input-a2" accept="image/*" style="display:none;">
+      <div class="camera-controls">
+        <button class="btn btn-primary btn-lg" id="btn-capture-a2">📸 拍照</button>
+        <button class="btn btn-outline btn-lg hidden" id="btn-retake-a2">🔄 重拍</button>
+        <button class="btn btn-outline btn-lg" id="btn-file-a2">📁 选择文件</button>
+        <button class="btn btn-outline btn-lg" id="btn-skip-a2">⏭️ 跳过</button>
+      </div>
     </div>
 
     <div class="form-group" style="margin-top:24px;">
@@ -135,60 +175,21 @@
   </main>
 </div>
 
-<!-- ═══ VIEW: Path B — style tags → scene tags → upload ═══ -->
-<div id="view-path-b-style" class="hidden">
+<!-- ═══ VIEW: Path B — upload + tags + single text ═══ -->
+<div id="view-path-b" class="hidden">
   <header class="header">
-    <div class="header-logo">💭 选择风格</div>
+    <div class="header-logo">💭 我有一些想法</div>
     <nav class="header-nav"><a href="#" class="btn-back">← 返回主页</a></nav>
   </header>
-  <main class="container" style="max-width:800px;margin:40px auto;">
-    <h1 style="text-align:center;margin-bottom:8px;">你喜欢什么风格？</h1>
-    <p class="subtitle" style="text-align:center;">可以多选，标签后续会持续更新</p>
-    <div class="tag-grid" id="style-tags"></div>
-    <div class="form-group" style="margin-top:16px;">
-      <label style="display:block;margin-bottom:6px;font-weight:600;">补充说明</label>
-      <textarea class="text-input" id="text-b-style" rows="2" placeholder="更多风格描述..."></textarea>
-    </div>
-    <div style="text-align:center;margin-top:32px;">
-      <button class="btn btn-primary btn-lg" id="btn-next-scene">下一步：选择场景 →</button>
-    </div>
-  </main>
-</div>
-
-<div id="view-path-b-scene" class="hidden">
-  <header class="header">
-    <div class="header-logo">🎯 选择场景</div>
-    <nav class="header-nav"><a href="#" class="btn-back-scene">← 返回风格选择</a></nav>
-  </header>
-  <main class="container" style="max-width:800px;margin:40px auto;">
-    <h1 style="text-align:center;margin-bottom:8px;">什么场合穿？</h1>
-    <p class="subtitle" style="text-align:center;">可以多选</p>
-    <div class="tag-grid" id="scene-tags"></div>
-    <div class="form-group" style="margin-top:16px;">
-      <label style="display:block;margin-bottom:6px;font-weight:600;">补充说明</label>
-      <textarea class="text-input" id="text-b-scene" rows="2" placeholder="更多场景描述..."></textarea>
-    </div>
-    <div style="text-align:center;margin-top:32px;">
-      <button class="btn btn-primary btn-lg" id="btn-confirm-b">确认，上传参考图 →</button>
-    </div>
-  </main>
-</div>
-
-<div id="view-path-b-upload" class="hidden">
-  <header class="header">
-    <div class="header-logo">📷 上传参考图</div>
-    <nav class="header-nav"><a href="#" class="btn-back-scene">← 返回场景选择</a></nav>
-  </header>
   <main class="camera-page">
-    <h1>上传参考图片</h1>
+    <h1>📷 上传参考图片</h1>
     <p class="subtitle">可选：拍一张或上传参考图</p>
 
-    <div class="camera-container" id="camera-container-b">
-      <video id="camera-feed-b" autoplay playsinline muted></video>
-      <img id="photo-preview-b" alt="Preview">
+    <div class="camera-container">
+      <img id="photo-preview-b" alt="预览" style="display:none;">
     </div>
-    <input type="file" id="file-input-b" accept="image/jpeg,image/png" style="display:none;">
-
+    <input type="file" id="capture-input-b" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="file-input-b" accept="image/*" style="display:none;">
     <div class="camera-controls">
       <button class="btn btn-primary btn-lg" id="btn-capture-b">📸 拍照</button>
       <button class="btn btn-outline btn-lg hidden" id="btn-retake-b">🔄 重拍</button>
@@ -196,7 +197,29 @@
       <button class="btn btn-outline btn-lg" id="btn-skip-b">⏭️ 跳过</button>
     </div>
 
-    <div style="text-align:center;margin-top:20px;">
+    <!-- Unified text input -->
+    <div class="form-group" style="margin-top:32px;">
+      <label style="display:block;margin-bottom:8px;font-weight:600;">📋 告诉我你的想法</label>
+      <textarea class="text-input" id="text-b" rows="3" placeholder="描述你的穿搭需求：想要什么类型的衣服、喜欢的风格、什么场合穿..."></textarea>
+    </div>
+
+    <!-- Tag sections -->
+    <div class="tag-section">
+      <h3 class="tag-section-title">👚 衣服款式（可多选）</h3>
+      <div class="tag-grid" id="clothing-type-tags"></div>
+    </div>
+
+    <div class="tag-section">
+      <h3 class="tag-section-title">💭 风格偏好（可多选）</h3>
+      <div class="tag-grid" id="style-tags"></div>
+    </div>
+
+    <div class="tag-section">
+      <h3 class="tag-section-title">🎯 穿着场景（可多选）</h3>
+      <div class="tag-grid" id="scene-tags"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;">
       <button class="btn btn-primary btn-lg" id="btn-generate-b">✨ 生成搭配</button>
     </div>
     <div id="status-b" class="status-message"></div>
@@ -214,6 +237,7 @@
       <div class="result-image">
         <img id="result-img" src="" alt="AI生成搭配图" style="width:100%;border-radius:var(--radius);">
         <button class="btn btn-outline" id="btn-save" style="margin-top:12px;width:100%;">💾 保存图片</button>
+        <button class="btn btn-primary" id="btn-retry" style="margin-top:8px;width:100%;">🔄 不满意？再试试</button>
       </div>
       <div class="result-chat">
         <div class="chat-messages" id="chat-messages"></div>
@@ -235,6 +259,8 @@
     <p style="text-align:center;color:var(--text-secondary);font-size:0.85rem;">预计需要 10-30 秒</p>
   </div>
 </div>
+
+</div><!-- #main-content -->
 
 <script src="/js/app.js"></script>
 </body>

@@ -28,8 +28,6 @@ def _hash_password(password: str) -> str:
 async def register(body: RegisterRequest, response: Response):
     if not body.nickname or not body.password:
         raise HTTPException(status_code=400, detail="昵称和密码不能为空")
-    if body.height <= 0 or body.weight <= 0:
-        raise HTTPException(status_code=400, detail="身高和体重必须大于0")
 
     existing = await get_user_by_nickname(body.nickname)
     if existing:
@@ -38,8 +36,8 @@ async def register(body: RegisterRequest, response: Response):
     user_id = await create_user(
         nickname=body.nickname,
         password_hash=_hash_password(body.password),
-        height=body.height,
-        weight=body.weight,
+        height=body.height or 0,
+        weight=body.weight or 0,
         bust=body.bust,
         waist=body.waist,
         hip=body.hip,

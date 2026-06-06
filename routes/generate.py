@@ -51,8 +51,10 @@ async def generate(
         waist=user.get("waist"),
         hip=user.get("hip"),
         text=body.text,
+        clothing_tags=body.clothing_tags,
         style_tags=body.style_tags,
         scene_tags=body.scene_tags,
+        has_user_photo=body.user_image_url is not None,
         has_reference=body.reference_image_url is not None,
     )
 
@@ -62,15 +64,25 @@ async def generate(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"图片生成失败: {str(e)}")
 
-    # Download, save original + compressed thumbnail
-    try:
-        orig_name, thumb_name = await _download_and_save(result["image_url"])
-        original_url = f"/api/uploads/{orig_name}"
-        thumb_url = f"/api/uploads/{thumb_name}"
-    except Exception:
-        # If download/compress fails, fall back to temporary OpenAI URL
-        original_url = result["image_url"]
-        thumb_url = result["image_url"]
+    # Download / process image
+    if result["image_url"].startswith("/api/uploads/"):
+        # Already local (e.g. from b64_json relay) — just compress
+        try:
+            local_path = str(config.UPLOAD_DIR / result["image_url"].split("/")[-1])
+            thumb_name = await compress_image(local_path)
+            original_url = result["image_url"]
+            thumb_url = f"/api/uploads/{thumb_name}"
+        except Exception:
+            original_url = result["image_url"]
+            thumb_url = result["image_url"]
+    else:
+        try:
+            orig_name, thumb_name = await _download_and_save(result["image_url"])
+            original_url = f"/api/uploads/{orig_name}"
+            thumb_url = f"/api/uploads/{thumb_name}"
+        except Exception:
+            original_url = result["image_url"]
+            thumb_url = result["image_url"]
 
     # Save both sides of the conversation AFTER success
     conv_user_id = await save_conversation(

@@ -14,8 +14,8 @@ class UploadResponse(BaseModel):
 class RegisterRequest(BaseModel):
     nickname: str
     password: str
-    height: float
-    weight: float
+    height: float | None = None
+    weight: float | None = None
     bust: float | None = None
     waist: float | None = None
     hip: float | None = None
@@ -35,8 +35,8 @@ class LoginResponse(BaseModel):
 class UserProfile(BaseModel):
     id: int
     nickname: str
-    height: float
-    weight: float
+    height: float | None = None
+    weight: float | None = None
     bust: float | None = None
     waist: float | None = None
     hip: float | None = None
@@ -46,7 +46,9 @@ class UserProfile(BaseModel):
 
 class GenerateRequest(BaseModel):
     text: str | None = ""
-    reference_image_url: str | None = None
+    user_image_url: str | None = None        # user's own photo
+    reference_image_url: str | None = None   # outfit reference photo
+    clothing_tags: list[str] | None = None   # clothing type preferences
     style_tags: list[str] | None = None
     scene_tags: list[str] | None = None
 
