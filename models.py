@@ -57,6 +57,7 @@ class GenerateResponse(BaseModel):
     image_url: str       # compressed thumbnail for display
     original_url: str    # full-resolution image for download
     revised_prompt: str
+    description: str     # user-facing outfit description (color, style, material)
     conversation_id: int
 
 
@@ -75,6 +76,23 @@ class ConversationItem(BaseModel):
 class SyncRequest(BaseModel):
     """Sync a batch of conversation entries from localStorage."""
     entries: list[dict]
+
+
+# ── Chat ────────────────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    text: str
+    history: list[dict] | None = None
+    path: str | None = None                 # "a" or "b"
+    clothing_tags: list[str] | None = None
+    style_tags: list[str] | None = None
+    scene_tags: list[str] | None = None
+
+
+class ChatResponse(BaseModel):
+    action: str   # "reply" or "generate"
+    text: str
+    prompt: str | None = None  # enriched prompt for image generation
 
 
 # ── Error ────────────────────────────────────────────────────────────

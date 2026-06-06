@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>穿搭AI助手</title>
+  <title>Fitness</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -19,11 +19,10 @@
   </div>
   <div class="sidebar-divider"></div>
   <div class="sidebar-body">
-    <a class="sidebar-item" data-nav="path-a">直接搭配</a>
-    <a class="sidebar-item" data-nav="path-b">灵感探索</a>
+    <a class="sidebar-item" data-nav="path-a">试试这件</a>
+    <a class="sidebar-item" data-nav="path-b">镜中幻象</a>
     <div class="sidebar-divider"></div>
-    <a class="sidebar-item" data-nav="result-a">搭配结果 A</a>
-    <a class="sidebar-item" data-nav="result-b">搭配结果 B</a>
+    <div id="sidebar-history"></div>
     <div class="sidebar-divider"></div>
     <a class="sidebar-item sidebar-logout" id="sidebar-logout">退出登录</a>
   </div>
@@ -35,8 +34,8 @@
 <!-- ═══ VIEW: Login/Register ═══ -->
 <div id="view-login" class="login-page">
   <div class="login-card">
-    <h1>穿搭AI助手</h1>
-    <p class="subtitle" id="login-subtitle">登录开始你的风格探索</p>
+    <h1>Fitness</h1>
+    <p class="subtitle" id="login-subtitle">适合你的才是最好的</p>
 
     <!-- Tabs -->
     <div class="tab-bar">
@@ -101,25 +100,25 @@
 <!-- ═══ VIEW: Home (path selection) ═══ -->
 <div id="view-home" class="hidden container">
   <header class="header">
-    <div class="header-logo">穿搭AI助手</div>
+    <div class="header-logo">Fitness</div>
     <nav class="header-nav">
-      <span id="home-nickname" style="color:var(--ink-muted-48);font-size:14px;margin-right:8px;"></span>
+      <span id="home-nickname" style="color:var(--muted);font-family:var(--font);font-size:14px;margin-right:8px;"></span>
       <a href="#" id="btn-logout" class="btn btn-sm btn-secondary">退出</a>
     </nav>
   </header>
   <main style="max-width:680px;margin:80px auto;text-align:center;padding:0 var(--space-lg);">
     <h1 class="display-md" style="margin-bottom:12px;">今天想穿什么？</h1>
-    <p style="color:var(--ink-muted-48);font-size:17px;margin-bottom:var(--space-xxl);">告诉我你的想法，我来帮你搭配</p>
+    <p style="color:var(--muted);font-family:var(--font);font-size:14px;margin-bottom:var(--space-xxl);">告诉我你的想法，我来帮你搭配</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);">
       <div class="path-card" id="btn-path-a">
         <div class="path-icon">👔</div>
-        <h2>直接搭配</h2>
-        <p>上传参考图片，描述你想要的搭配风格</p>
+        <h2>试试这件</h2>
+        <p>上传想要尝试的服装图片，试试这件是否适合你</p>
       </div>
       <div class="path-card" id="btn-path-b">
         <div class="path-icon">✨</div>
-        <h2>灵感探索</h2>
-        <p>选择风格和场景标签，让AI为你找到灵感</p>
+        <h2>镜中幻象</h2>
+        <p>描述自己的感觉，让小费帮你找到最合心意的搭配</p>
       </div>
     </div>
   </main>
@@ -128,14 +127,14 @@
 <!-- ═══ VIEW: Path A — user photo + outfit reference + text ═══ -->
 <div id="view-path-a" class="hidden">
   <header class="header">
-    <div class="header-logo">直接搭配</div>
+    <div class="header-logo">试试这件</div>
     <nav class="header-nav"><a href="#" class="btn-back">返回</a></nav>
   </header>
   <main class="camera-page">
     <!-- Upload 1: User's own photo -->
     <div style="margin-bottom:var(--space-xxl);">
       <h1>上传你的照片</h1>
-      <p class="subtitle">拍一张全身或半身照，AI将根据你的身材特征搭配</p>
+      <p class="subtitle">拍一张全身或半身照，小费将帮你更衣</p>
       <div class="camera-container">
         <img id="photo-preview-a1" alt="预览" style="display:none;">
       </div>
@@ -152,7 +151,7 @@
     <!-- Upload 2: Outfit reference -->
     <div style="margin-bottom:var(--space-xl);">
       <h1>服装参考图</h1>
-      <p class="subtitle">上传你喜欢的穿搭风格参考（可选）</p>
+      <p class="subtitle">选择你想要的服装图片</p>
       <div class="camera-container">
         <img id="photo-preview-a2" alt="预览" style="display:none;">
       </div>
@@ -167,8 +166,8 @@
     </div>
 
     <div class="form-group" style="margin-top:var(--space-xl);">
-      <label>描述你想要的搭配</label>
-      <textarea id="text-a" class="text-input" rows="3" placeholder="例如：简约通勤风格，浅色系，适合初夏..."></textarea>
+      <label>细节补充</label>
+      <textarea id="text-a" class="text-input" rows="3" placeholder="例如：只更换上衣"></textarea>
     </div>
 
     <div style="text-align:center;margin-top:var(--space-xl);">
@@ -181,12 +180,12 @@
 <!-- ═══ VIEW: Path B — upload + tags + single text ═══ -->
 <div id="view-path-b" class="hidden">
   <header class="header">
-    <div class="header-logo">灵感探索</div>
+    <div class="header-logo">镜中幻象</div>
     <nav class="header-nav"><a href="#" class="btn-back">返回</a></nav>
   </header>
   <main class="camera-page">
-    <h1>上传参考图片</h1>
-    <p class="subtitle">可选：拍一张或上传参考图</p>
+    <h1>上传你的照片</h1>
+    <p class="subtitle">拍一张全身或半身照，小费将帮你更衣</p>
 
     <div class="camera-container">
       <img id="photo-preview-b" alt="预览" style="display:none;">
@@ -203,22 +202,17 @@
     <!-- Unified text input -->
     <div class="form-group" style="margin-top:var(--space-xl);">
       <label>告诉我你的想法</label>
-      <textarea class="text-input" id="text-b" rows="3" placeholder="描述你的穿搭需求：想要什么类型、喜欢的风格、什么场合..."></textarea>
+      <textarea class="text-input" id="text-b" rows="3" placeholder="描述理想中的自己，给小费一些提示"></textarea>
     </div>
 
     <!-- Tag sections -->
     <div class="tag-section">
-      <h3 class="tag-section-title">衣服款式</h3>
-      <div class="tag-grid" id="clothing-type-tags"></div>
-    </div>
-
-    <div class="tag-section">
-      <h3 class="tag-section-title">风格偏好</h3>
+      <h3 class="tag-section-title">目标气质</h3>
       <div class="tag-grid" id="style-tags"></div>
     </div>
 
     <div class="tag-section">
-      <h3 class="tag-section-title">穿着场景</h3>
+      <h3 class="tag-section-title">出席场合</h3>
       <div class="tag-grid" id="scene-tags"></div>
     </div>
 
@@ -260,8 +254,7 @@
 <div id="loading-overlay" class="modal-overlay hidden">
   <div class="loading-card">
     <div class="spinner spinner-dark" style="width:36px;height:36px;border-width:3px;margin:0 auto 20px;"></div>
-    <p>AI 正在为你搭配...</p>
-    <p>预计需要 10-30 秒</p>
+    <p>小费正在为你处理中……</p>
   </div>
 </div>
 

@@ -15,8 +15,8 @@ let state = {
   selectedClothingTypes: [],
   selectedStyles: [],
   selectedScenes: [],
-  conversationsA: [],    // Path A conversation history
-  conversationsB: [],    // Path B conversation history
+  sessions: [],          // all conversation sessions
+  currentSessionId: null, // active session id
 };
 
 // ── Camera instances ──────────────────────────────────────────────
@@ -25,21 +25,89 @@ let cameraA1 = null, cameraA2 = null, cameraB = null;
 // ── DOM refs ────────────────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
 
-// ── Conversations helper (path-aware) ──────────────────────────────
-function getConversations() {
-  return state.path === 'b' ? state.conversationsB : state.conversationsA;
-}
-function setConversations(arr) {
-  if (state.path === 'b') {
-    state.conversationsB = arr;
-    LS.set('fashion_conversations_b', arr);
-  } else {
-    state.conversationsA = arr;
-    LS.set('fashion_conversations_a', arr);
-  }
+// ═══════════════════════════════════════════════════════════════════
+//  SESSION MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+
+const PATH_LABELS = { a: '试试这件', b: '镜中幻象' };
+
+function createSession(path) {
+  const session = {
+    id: 'sess_' + Date.now(),
+    path: path,
+    label: PATH_LABELS[path] || path,
+    messages: [],
+    createdAt: new Date().toISOString(),
+    preview: '',
+  };
+  state.sessions.push(session);
+  state.currentSessionId = session.id;
+  saveSessions();
+  renderSidebarHistory();
+  return session;
 }
 
-// ── Sidebar ────────────────────────────────────────────────────────
+function getCurrentSession() {
+  return state.sessions.find(s => s.id === state.currentSessionId) || null;
+}
+
+function getSessionMessages() {
+  const session = getCurrentSession();
+  return session ? session.messages : [];
+}
+
+function pushMessage(msg) {
+  const session = getCurrentSession();
+  if (!session) return;
+  session.messages.push(msg);
+  if (!session.preview && msg.role === 'user' && msg.text) {
+    session.preview = msg.text.slice(0, 30);
+  }
+  saveSessions();
+  renderSidebarHistory();
+}
+
+function saveSessions() {
+  LS.set('fashion_sessions', state.sessions);
+  LS.set('fashion_current_session', state.currentSessionId);
+}
+
+function loadSessions() {
+  state.sessions = LS.get('fashion_sessions') || [];
+  state.currentSessionId = LS.get('fashion_current_session') || null;
+
+  // Migrate old format
+  const oldA = LS.get('fashion_conversations_a');
+  const oldB = LS.get('fashion_conversations_b');
+  if (oldA && oldA.length > 0) {
+    state.sessions.push({
+      id: 'sess_migrated_a',
+      path: 'a',
+      label: PATH_LABELS.a,
+      messages: oldA,
+      createdAt: oldA[0]?.created_at || new Date().toISOString(),
+      preview: oldA.find(m => m.role === 'user' && m.text)?.text?.slice(0, 30) || '',
+    });
+    LS.remove('fashion_conversations_a');
+  }
+  if (oldB && oldB.length > 0) {
+    state.sessions.push({
+      id: 'sess_migrated_b',
+      path: 'b',
+      label: PATH_LABELS.b,
+      messages: oldB,
+      createdAt: oldB[0]?.created_at || new Date().toISOString(),
+      preview: oldB.find(m => m.role === 'user' && m.text)?.text?.slice(0, 30) || '',
+    });
+    LS.remove('fashion_conversations_b');
+  }
+  if (oldA || oldB) saveSessions();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════════════════
+
 function showSidebar() {
   document.getElementById('sidebar').classList.remove('hidden');
   document.body.classList.add('has-sidebar');
@@ -54,29 +122,93 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('collapsed');
 });
 
-// Sidebar clicks
+// Sidebar static clicks
 document.getElementById('sidebar-home').addEventListener('click', () => showHome());
 document.getElementById('sidebar-logout').addEventListener('click', async () => {
   await fetch('/api/user/logout', { method: 'POST' });
-  state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], conversationsA: [], conversationsB: [] };
-  ['fashion_token','fashion_user','fashion_conversations_a','fashion_conversations_b','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
+  state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], sessions: [], currentSessionId: null };
+  ['fashion_token','fashion_user','fashion_sessions','fashion_current_session','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
   showLogin();
 });
+
 document.querySelectorAll('.sidebar-item[data-nav]').forEach(item => {
   item.addEventListener('click', () => {
     const target = item.dataset.nav;
     if (target === 'path-a') { state.path = 'a'; LS.set('fashion_path','a'); showPathA(); }
     else if (target === 'path-b') { state.path = 'b'; LS.set('fashion_path','b'); showPathB(); }
-    else if (target === 'result-a') {
-      state.path = 'a'; LS.set('fashion_path','a');
-      if (state.conversationsA.length > 0) { showSidebar(); showView('view-result'); renderChat(); }
-    }
-    else if (target === 'result-b') {
-      state.path = 'b'; LS.set('fashion_path','b');
-      if (state.conversationsB.length > 0) { showSidebar(); showView('view-result'); renderChat(); }
-    }
   });
 });
+
+function renderSidebarHistory() {
+  const container = $('sidebar-history');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const sessionsA = state.sessions.filter(s => s.path === 'a' && s.messages.length > 0);
+  const sessionsB = state.sessions.filter(s => s.path === 'b' && s.messages.length > 0);
+
+  if (sessionsA.length > 0) {
+    const titleA = document.createElement('div');
+    titleA.className = 'history-group-title';
+    titleA.textContent = PATH_LABELS.a;
+    container.appendChild(titleA);
+    sessionsA.slice().reverse().forEach(s => container.appendChild(makeHistoryItem(s)));
+  }
+
+  if (sessionsB.length > 0) {
+    const titleB = document.createElement('div');
+    titleB.className = 'history-group-title';
+    titleB.textContent = PATH_LABELS.b;
+    container.appendChild(titleB);
+    sessionsB.slice().reverse().forEach(s => container.appendChild(makeHistoryItem(s)));
+  }
+}
+
+function makeHistoryItem(session) {
+  const item = document.createElement('a');
+  item.className = 'sidebar-item history-item' + (session.id === state.currentSessionId ? ' active' : '');
+
+  const label = document.createElement('span');
+  label.className = 'history-item-label';
+  label.textContent = session.preview || '新对话';
+  item.title = session.preview || '新对话';
+
+  const delBtn = document.createElement('span');
+  delBtn.className = 'history-item-delete';
+  delBtn.textContent = '×';
+  delBtn.title = '删除';
+  delBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.sessions = state.sessions.filter(s => s.id !== session.id);
+    if (state.currentSessionId === session.id) {
+      state.currentSessionId = null;
+    }
+    saveSessions();
+    renderSidebarHistory();
+  });
+
+  item.appendChild(label);
+  item.appendChild(delBtn);
+
+  item.addEventListener('click', () => {
+    state.currentSessionId = session.id;
+    state.path = session.path;
+    LS.set('fashion_path', session.path);
+    saveSessions();
+
+    const msgs = session.messages;
+    const lastAssistant = [...msgs].reverse().find(m => m.role === 'assistant' && m.image_url);
+    if (lastAssistant) {
+      showResult(lastAssistant.image_url, lastAssistant.original_url || lastAssistant.image_url);
+    } else {
+      showSidebar();
+      showView('view-result');
+      renderChat();
+    }
+    renderSidebarHistory();
+  });
+  return item;
+}
 
 // ── View switching ──────────────────────────────────────────────────
 function showView(id) {
@@ -90,17 +222,14 @@ function showView(id) {
 // ═══════════════════════════════════════════════════════════════════
 
 async function init() {
-  // Restore from localStorage
   state.token = LS.get('fashion_token');
   state.user = LS.get('fashion_user');
-  state.conversationsA = LS.get('fashion_conversations_a') || [];
-  state.conversationsB = LS.get('fashion_conversations_b') || [];
+  loadSessions();
   state.selectedClothingTypes = LS.get('fashion_clothing_types') || [];
   state.selectedStyles = LS.get('fashion_styles') || [];
   state.selectedScenes = LS.get('fashion_scenes') || [];
   state.path = LS.get('fashion_path');
 
-  // Verify token is still valid
   if (state.token) {
     try {
       const res = await fetch('/api/user/me');
@@ -111,7 +240,6 @@ async function init() {
         return;
       }
     } catch {}
-    // Token expired
     state.token = null;
     LS.remove('fashion_token');
   }
@@ -161,7 +289,7 @@ $('login-form').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      state.token = 'session'; // cookie-based, just mark as logged in
+      state.token = 'session';
       state.user = data.user;
       LS.set('fashion_token', state.token);
       LS.set('fashion_user', state.user);
@@ -231,12 +359,13 @@ function showHome() {
   showSidebar();
   showView('view-home');
   $('home-nickname').textContent = state.user?.nickname || '';
+  renderSidebarHistory();
 }
 
 $('btn-logout').addEventListener('click', async () => {
   await fetch('/api/user/logout', { method: 'POST' });
-  state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], conversationsA: [], conversationsB: [] };
-  ['fashion_token','fashion_user','fashion_conversations_a','fashion_conversations_b','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
+  state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], sessions: [], currentSessionId: null };
+  ['fashion_token','fashion_user','fashion_sessions','fashion_current_session','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
   showLogin();
 });
 
@@ -249,19 +378,18 @@ $('btn-path-b').addEventListener('click', () => { state.path = 'b'; LS.set('fash
 // ═══════════════════════════════════════════════════════════════════
 
 function showPathA() {
+  createSession('a');
   showSidebar();
   showView('view-path-a');
   $('text-a').value = '';
   $('status-a').textContent = '';
   $('status-a').className = 'status-message';
 
-  // Camera 1: user's own photo
   if (!cameraA1) { cameraA1 = new CameraInstance('a1'); cameraA1.start(); }
-  else { cameraA1.start(); }
+  else { cameraA1.clearImage(); cameraA1.start(); }
 
-  // Camera 2: outfit reference
   if (!cameraA2) { cameraA2 = new CameraInstance('a2'); cameraA2.start(); }
-  else { cameraA2.start(); }
+  else { cameraA2.clearImage(); cameraA2.start(); }
 }
 
 $('btn-generate-a').addEventListener('click', async () => {
@@ -289,12 +417,11 @@ $('btn-generate-a').addEventListener('click', async () => {
   }, 'a');
 });
 
-// Skip buttons for Path A upload areas
 $('btn-skip-a1').addEventListener('click', () => { if (cameraA1) cameraA1.clearImage(); });
 $('btn-skip-a2').addEventListener('click', () => { if (cameraA2) cameraA2.clearImage(); });
 
 // ═══════════════════════════════════════════════════════════════════
-//  PATH B — single page: upload + 3 tag sections + 1 text box
+//  PATH B — single page: upload + tag sections + text box
 // ═══════════════════════════════════════════════════════════════════
 
 const CLOTHING_TYPE_TAGS = [
@@ -339,17 +466,16 @@ function buildTagGrid(containerId, tags, selectedSet, storageKey) {
 }
 
 function showPathB() {
+  createSession('b');
   showSidebar();
   showView('view-path-b');
   $('text-b').value = '';
   $('status-b').textContent = '';
   $('status-b').className = 'status-message';
 
-  // Camera
   if (!cameraB) { cameraB = new CameraInstance('b'); cameraB.start(); }
-  else { cameraB.start(); }
+  else { cameraB.clearImage(); cameraB.start(); }
 
-  // Tag sections
   state.selectedClothingTypes = new Set(LS.get('fashion_clothing_types') || []);
   state.selectedStyles = new Set(LS.get('fashion_styles') || []);
   state.selectedScenes = new Set(LS.get('fashion_scenes') || []);
@@ -394,9 +520,7 @@ async function doGenerate(body, pathKey) {
 
     if (!res.ok) throw new Error(data.detail || '生成失败');
 
-    // Add to path-specific conversations
-    const convs = getConversations();
-    convs.push({
+    pushMessage({
       id: data.conversation_id,
       role: 'user',
       text: body.text,
@@ -406,15 +530,14 @@ async function doGenerate(body, pathKey) {
       scene_tags: body.scene_tags,
       created_at: new Date().toISOString(),
     });
-    convs.push({
+    pushMessage({
       id: data.conversation_id + 1,
       role: 'assistant',
       image_url: data.image_url,
       original_url: data.original_url,
-      text: null,
+      text: data.description || null,
       created_at: new Date().toISOString(),
     });
-    setConversations(convs);
 
     showResult(data.image_url, data.original_url);
   } catch (err) {
@@ -439,14 +562,15 @@ function showResult(imageUrl, originalUrl) {
   $('chat-status').textContent = '';
   $('chat-status').className = 'status-message';
   renderChat();
+  renderSidebarHistory();
 }
 
 function renderChat() {
   const container = $('chat-messages');
   container.innerHTML = '';
 
-  const convs = getConversations();
-  convs.forEach(msg => {
+  const msgs = getSessionMessages();
+  msgs.forEach(msg => {
     const div = document.createElement('div');
     div.className = 'chat-msg chat-' + msg.role;
 
@@ -454,12 +578,21 @@ function renderChat() {
       const img = document.createElement('img');
       img.src = msg.image_url;
       img.style.maxWidth = '200px';
-      img.style.borderRadius = '8px';
+      img.style.borderRadius = '0';
       img.style.display = 'block';
       div.appendChild(img);
+
+      const saveBtn = document.createElement('a');
+      saveBtn.href = msg.original_url || msg.image_url;
+      saveBtn.download = 'outfit_' + Date.now() + '.png';
+      saveBtn.className = 'btn btn-outline';
+      saveBtn.textContent = '保存';
+      saveBtn.style.cssText = 'display:inline-block;margin-top:6px;padding:4px 12px;font-size:12px;';
+      div.appendChild(saveBtn);
     }
     if (msg.text) {
       const p = document.createElement('p');
+      p.style.whiteSpace = 'pre-line';
       p.textContent = msg.text;
       div.appendChild(p);
     }
@@ -474,38 +607,72 @@ $('btn-chat-send').addEventListener('click', async () => {
 
   const overlay = $('loading-overlay');
   overlay.classList.remove('hidden');
+  $('chat-input').value = '';
+
+  // Show user message immediately
+  pushMessage({ role: 'user', text, created_at: new Date().toISOString() });
+  renderChat();
 
   try {
-    const res = await fetch('/api/generate', {
+    // Step 1: Ask dialogue model to classify intent
+    const history = getSessionMessages().slice(-6).map(m => ({ role: m.role, text: m.text || '' }));
+    const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
+        history,
+        path: state.path || null,
         clothing_tags: LS.get('fashion_clothing_types') || [],
         style_tags: LS.get('fashion_styles') || [],
         scene_tags: LS.get('fashion_scenes') || [],
       }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || '生成失败');
+    const chatData = await chatRes.json();
+    if (!chatRes.ok) throw new Error(chatData.detail || '对话失败');
 
-    const convs = getConversations();
-    convs.push({ role: 'user', text, created_at: new Date().toISOString() });
-    convs.push({
-      role: 'assistant',
-      image_url: data.image_url,
-      original_url: data.original_url,
-      text: null,
-      created_at: new Date().toISOString(),
-    });
-    setConversations(convs);
+    if (chatData.action === 'generate') {
+      // Show confirmation text from dialogue model
+      if (chatData.text) {
+        pushMessage({ role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
+        renderChat();
+      }
 
-    $('result-img').src = data.image_url;
-    $('result-img').dataset.originalUrl = data.original_url;
-    $('chat-input').value = '';
+      // Step 2: Trigger image generation using enriched prompt
+      const lastImage = $('result-img').dataset.originalUrl || null;
+      const genText = chatData.prompt || text;
+      const genRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: genText,
+          user_image_url: lastImage,
+          clothing_tags: LS.get('fashion_clothing_types') || [],
+          style_tags: LS.get('fashion_styles') || [],
+          scene_tags: LS.get('fashion_scenes') || [],
+        }),
+      });
+      const genData = await genRes.json();
+      if (!genRes.ok) throw new Error(genData.detail || '生成失败');
+
+      pushMessage({
+        role: 'assistant',
+        image_url: genData.image_url,
+        original_url: genData.original_url,
+        text: genData.description || null,
+        created_at: new Date().toISOString(),
+      });
+
+      $('result-img').src = genData.image_url;
+      $('result-img').dataset.originalUrl = genData.original_url;
+    } else {
+      // Pure reply — no image generation
+      pushMessage({ role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
+    }
+
     renderChat();
   } catch (err) {
-    $('chat-status').textContent = '生成失败: ' + err.message;
+    $('chat-status').textContent = err.message;
     $('chat-status').className = 'status-message show error';
   } finally {
     overlay.classList.add('hidden');
@@ -526,7 +693,6 @@ $('btn-save').addEventListener('click', () => {
 $('btn-retry').addEventListener('click', () => {
   if (state.path === 'b') {
     showPathB();
-    // Scroll to text input for convenience
     $('text-b')?.focus();
   } else {
     showPathA();
@@ -546,7 +712,7 @@ document.querySelectorAll('.btn-back-home').forEach(btn => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-//  CAMERA INSTANCE — uses native camera via capture attribute, no getUserMedia
+//  CAMERA INSTANCE — uses native camera via capture attribute
 // ═══════════════════════════════════════════════════════════════════
 
 class CameraInstance {
@@ -566,30 +732,25 @@ class CameraInstance {
     this.captureInput = document.getElementById('capture-input-' + s);
     this.fileInput    = document.getElementById('file-input-' + s);
 
-    // "拍照" → triggers native camera (mobile) or file picker (desktop)
     if (this.btnCapture) {
       this.btnCapture.addEventListener('click', () => {
         if (this.captureInput) this.captureInput.click();
       });
     }
-    // "重拍" → clear and re-trigger capture
     if (this.btnRetake) {
       this.btnRetake.addEventListener('click', () => {
         this.clearImage();
         if (this.captureInput) this.captureInput.click();
       });
     }
-    // "选择文件" → standard file picker
     if (this.btnFile) {
       this.btnFile.addEventListener('click', () => {
         if (this.fileInput) this.fileInput.click();
       });
     }
-    // Capture input change
     if (this.captureInput) {
       this.captureInput.addEventListener('change', (e) => this._handleFile(e.target.files[0]));
     }
-    // File input change
     if (this.fileInput) {
       this.fileInput.addEventListener('change', (e) => this._handleFile(e.target.files[0]));
     }
@@ -600,7 +761,6 @@ class CameraInstance {
     this.capturedBlob = file;
     this.uploadFileName = file.name;
     this.imageUrl = null;
-    // Show preview
     if (this._previewUrl) URL.revokeObjectURL(this._previewUrl);
     this._previewUrl = URL.createObjectURL(file);
     this.preview.src = this._previewUrl;
@@ -613,9 +773,7 @@ class CameraInstance {
     if (this.btnRetake) this.btnRetake.classList.remove('hidden');
   }
 
-  start() {
-    // No-op: no live preview, camera opens on demand when user clicks "拍照"
-  }
+  start() {}
 
   showPreview() { this._showCaptured(); }
 

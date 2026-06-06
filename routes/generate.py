@@ -1,4 +1,4 @@
-"""POST /api/generate — Vision + Standard Portrait + Style Parser + PromptEngine + GPT Image 2."""
+"""POST /api/generate — Vision + Style Parser + Direct Photo Edit (images.edit)."""
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +11,6 @@ from services.image_gen import (
     build_final_prompt,
     compress_image,
     generate_image,
-    generate_standard_portrait,
     generate_styled_image,
 )
 from services.prompt_engine import PromptEngine
@@ -32,6 +31,31 @@ def _local_path_from_url(url: str | None) -> str | None:
         if path.exists():
             return str(path)
     return None
+
+
+def _build_description(style_directive: str) -> str:
+    """Extract a user-friendly outfit description from the styling brief."""
+    brief = PromptEngine.parse_styling_brief(style_directive)
+    if not brief:
+        return ""
+    parts = []
+    if brief.get("Style Name"):
+        parts.append(f"风格：{brief['Style Name']}")
+    for key in ("Top Garment", "Bottom Garment", "Footwear", "Accessories"):
+        val = brief.get(key, "").strip()
+        if val and val.lower() != "none":
+            label = {"Top Garment": "上装", "Bottom Garment": "下装",
+                     "Footwear": "鞋履", "Accessories": "配饰"}[key]
+            parts.append(f"{label}：{val}")
+    if brief.get("Color Palette"):
+        parts.append(f"配色：{brief['Color Palette']}")
+    if brief.get("Materials & Textures"):
+        parts.append(f"材质：{brief['Materials & Textures']}")
+    if brief.get("Silhouette"):
+        parts.append(f"廓形：{brief['Silhouette']}")
+    if brief.get("Styling Notes"):
+        parts.append(f"搭配要点：{brief['Styling Notes']}")
+    return "\n".join(parts)
 
 
 def _guess_hints(identity_text: str, style_tags: list[str], scene_tags: list[str]) -> tuple[str, str, str]:
@@ -109,19 +133,6 @@ async def generate(
             parts.append(f"Hip: {user['hip']}cm")
         identity_features = "## USER BODY DATA\n" + "\n".join(parts) if parts else "## USER BODY DATA\nNo detailed body data provided."
 
-    # ── Step 1: Standard Portrait (only when user photo exists) ─────────
-    standard_portrait_url: str | None = None
-    standard_portrait_path: str | None = None
-
-    if has_user_photo:
-        try:
-            std_result = await generate_standard_portrait(identity_features)
-            standard_portrait_url = std_result["image_url"]
-            standard_portrait_path = std_result.get("local_path")
-        except Exception as e:
-            # Non-fatal: if Step 1 fails we can still fall back to text-only generation
-            print(f"[WARN] Step 1 standard portrait failed: {e}")
-
     # ── Step 3: Style parsing ───────────────────────────────────────────
     gender_hint, season_hint, occasion_hint = _guess_hints(
         identity_features, body.style_tags or [], body.scene_tags or []
@@ -149,16 +160,26 @@ async def generate(
     )
 
     try:
-        if standard_portrait_path and Path(standard_portrait_path).exists():
+        if user_photo_path and Path(user_photo_path).exists():
+            # 直接在用户原始照片上换装
             result = await generate_styled_image(
                 prompt=final_prompt,
-                reference_image_path=standard_portrait_path,
+                reference_image_path=user_photo_path,
+            )
+        elif reference_photo_path and Path(reference_photo_path).exists():
+            # 用户没传自己的照片，但有参考图，用参考图做编辑
+            result = await generate_styled_image(
+                prompt=final_prompt,
+                reference_image_path=reference_photo_path,
             )
         else:
-            # Fallback: no user photo or Step 1 failed
+            # 没有任何图片，纯文字生成
             result = await generate_image(final_prompt)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"图片生成失败: {str(e)}")
+
+    # Build user-facing description from style directive
+    description = _build_description(style_directive)
 
     # Compress thumbnail for display
     local_path = result.get("local_path")
@@ -187,12 +208,13 @@ async def generate(
         user_id=user_id,
         role="assistant",
         image_url=original_url,
-        text=result["revised_prompt"],
+        text=description or result["revised_prompt"],
     )
 
     return GenerateResponse(
         image_url=thumb_url,
         original_url=original_url,
         revised_prompt=result["revised_prompt"],
+        description=description,
         conversation_id=conv_id,
     )

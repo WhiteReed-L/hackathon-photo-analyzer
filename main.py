@@ -35,11 +35,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ── API Routes ──────────────────────────────────────────────────────
-from routes import conversations, generate, upload, user
+from routes import conversations, chat, generate, upload, user
 
 app.include_router(user.router, prefix="/api", tags=["User"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(generate.router, prefix="/api", tags=["Generate"])
+app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
 
 # ── Static file mounts (order matters) ──────────────────────────────

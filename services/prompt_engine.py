@@ -377,22 +377,25 @@ Background Vibe: [brief scene suggestion that matches the style mood]
     # ============================================================
 
     STYLE_TRANSFER_TEMPLATE: str = """\
-You are a professional virtual fashion stylist and photorealistic image
-generator. Your task is to dress the reference person in a specific fashion
-style while preserving their identity perfectly.
+You are a professional virtual fashion stylist. Your task is to modify the
+provided photograph to change ONLY the person's clothing while preserving
+their identity, pose, and environment perfectly.
 
-## PRIMARY REFERENCES (USE BOTH)
+## PRIMARY REFERENCE
 
-### Reference 1: Standard Portrait
-Use the provided STANDARD PORTRAIT image as your PRIMARY visual reference
-for this person's identity. This image shows them in neutral clothing under
-clear, even lighting. Study their face, body proportions, and overall
-appearance carefully.
+### The Person in This Photo
+The provided image is the user's OWN PHOTOGRAPH. This is the actual person
+you are styling. Preserve their face, body, hair, skin, pose, and all
+physical identity features with 100% fidelity.
 
-### Reference 2: Identity Anchor Text
+You are ONLY changing their clothing, accessories, and footwear — everything
+else (face, hair, body shape, skin, background, lighting, pose) stays
+EXACTLY as it appears in the original photo.
+
+### Identity Anchor (for verification)
 {identity_features}
 
-## STYLE SPECIFICATION
+## STYLE SPECIFICATION (What to Dress Them In)
 
 {style_directive}
 
@@ -400,108 +403,62 @@ appearance carefully.
 
 {composition_settings}
 
-## GENERATION INSTRUCTIONS
+## EDITING INSTRUCTIONS
 
-Create a photorealistic fashion portrait of the EXACT SAME PERSON from the
-references, now styled according to the Style Specification above. The image
-should look like a professional fashion editorial photograph — natural,
-aspirational, but believable.
+Modify the original photo so the person is now wearing the outfit described
+in the Style Specification. This is a CLOTHING SWAP operation on a real
+photograph — NOT a full regeneration of the image.
 
-### What TO Change (The Style Layer)
-- Clothing: Exactly as specified in the Style Specification
-- Footwear: Match the style direction
-- Accessories: As specified, or omit if none specified
-- Background/Environment: As specified in Composition Parameters
-- Lighting Mood: Adjust to complement the style (e.g., warm golden hour for
-  bohemian styles, crisp studio light for minimalist styles)
-- Overall color grading: Match the style's aesthetic palette
+### What TO Change (ONLY These)
+- Clothing: Replace current garments with those in the Style Specification
+- Footwear: Replace with style-appropriate shoes
+- Accessories: Add/replace as specified (or remove if "none" specified)
+- Minor lighting adjustments to make new clothing look natural in the scene
 
-### What MUST NOT Change (The Identity Lock)
+### What MUST NOT Change (ABSOLUTE LOCK)
 
-#### 1. FACIAL STRUCTURE — ABSOLUTE ZERO TOLERANCE
-The face in the output MUST be IDENTICAL to the reference person. Specifically:
+#### 1. FACE — ZERO TOLERANCE
+- Every facial feature must remain pixel-identical to the input photo
+- Same eyes, nose, lips, jawline, skin tone, skin texture, expression
+- Same apparent age, same ethnicity presentation
+- Do NOT beautify, smooth, slim, or modify ANY facial feature
 
-- Eye shape: Exact same almond/round/monolid/etc. configuration
-- Eye spacing: Same distance between eyes
-- Eyelid type: Single, double, hooded — exactly as reference
-- Nose: Same bridge height, same tip shape, same width, same nostril visibility
-- Lips: Same fullness, same natural resting shape, same Cupid's bow definition
-- Jawline: Same angularity or softness, same width
-- Chin: Same projection, same shape
-- Cheekbones: Same prominence, same width
-- Ears: Same size, same attachment (if visible)
-- Skin tone: EXACTLY the same color and undertone as reference
-- Skin texture: Same pore visibility, same freckle/mole pattern, same
-  natural imperfections
-- Apparent age: Do NOT make younger or older
-- Ethnicity: Do NOT shift racial presentation in any direction
+#### 2. HAIR — UNCHANGED
+- Same color, length, texture, style, parting as the input photo
+- Do NOT restyle, recolor, or modify hair in any way
 
-#### 2. HAIR — UNCHANGED ROOT IDENTITY
-- Hair color: Must remain the natural base color from the reference
-- Hair length: Must remain the same (can be STYLED differently — e.g.,
-  tucked behind ear, slightly wind-blown, under a hat — but the cut length
-  must be recognizable)
-- Hair texture: Straight stays straight, curly stays curly
-- Exception: If the style explicitly requires a hat or head covering, the
-  hair may be mostly hidden, but any visible hair must match reference
+#### 3. BODY — UNCHANGED
+- Same body frame, proportions, pose, posture
+- The new clothing must FIT this person's actual body shape
+- Do NOT slim, bulk up, or idealize the body
 
-#### 3. BODY — CONSISTENT
-- Body frame: Same shoulder width, same torso length, same hip width
-- Height impression: Same as reference
-- Posture: Can adjust naturally for the clothing (e.g., oversized coat may
-  cause slightly different stance), but bone structure proportions locked
-- Do NOT slim down, bulk up, or idealize the body
+#### 4. BACKGROUND & ENVIRONMENT — UNCHANGED
+- Keep the original photo's background, lighting direction, and atmosphere
+- The new clothing should look naturally lit by the existing scene lighting
 
-#### 4. EXPRESSION — NATURAL ADAPTATION
-The expression may adapt NATURALLY to the style and context:
-- A power suit might warrant a confident, composed expression
-- A beach vacation outfit might warrant a relaxed, pleasant expression
-- However: The fundamental muscle structure of the face must remain visible.
-  Do NOT distort eye shape through smiling. Do NOT change the resting
-  position of eyebrows. Do NOT add dimples that don't exist.
-- Rule: Expression changes are allowed only to the extent that they would
-  occur NATURALLY if this person were actually wearing this outfit in this
-  setting.
+#### 5. POSE — UNCHANGED
+- Keep the exact same body position, arm placement, leg stance
+- Clothing should drape naturally over the existing pose
 
-## CRITICAL PROHIBITIONS (ANTI-HALLUCINATION GUARDRAILS)
+## CRITICAL PROHIBITIONS
 
-1. NO facial feature modification of ANY kind
-2. NO skin smoothing or "beauty filter" effect
-3. NO whitening or darkening of skin tone
-4. NO change to eye color
-5. NO addition or removal of facial hair (unless specified in style)
-6. NO alteration of face shape (no slimming, no widening)
-7. NO making the person look like a model who happens to resemble them —
-   they must look like THEMSELVES
-8. NO illustration, painting, anime, or stylized rendering — strictly
-   photorealistic
-9. NO cloning the face onto a different body — the body must also match
-   the reference person's frame
-10. If the style includes sunglasses or glasses, ensure the frames do NOT
-    obscure the identifying facial features to the point of unrecognizability
+1. Do NOT regenerate the person — EDIT the existing photo
+2. Do NOT change face shape, skin color, or any facial feature
+3. Do NOT smooth skin or apply beauty filters
+4. Do NOT change the background or environment
+5. Do NOT change body proportions or pose
+6. Do NOT make it look illustrated, painted, or AI-generated — maintain
+   the photographic quality of the original
+7. The result should look like the person actually changed clothes and took
+   another photo in the same spot
 
-## QUALITY SPECIFICATION
+## QUALITY REQUIREMENTS
 
-- Photorealistic fashion photography
-- Professional camera quality (not smartphone selfie aesthetic)
-- Natural fabric behavior: drape, fold, weight, movement
-- Believable fit: clothes should look like they're actually being worn,
-  not pasted on
-- Proper scale: accessories, buttons, zippers should be proportionally correct
-- Coherent lighting: all elements illuminated from consistent direction
-- Shallow to moderate depth of field acceptable for aesthetic purposes
-- Skin should show natural texture (pores, fine lines) — not plastic perfection
-
-## FINAL CHECK
-
-Before outputting, mentally verify:
-- If I covered the clothing with a black box, would I still recognize this
-  exact person from the reference?
-- Does the clothing look like it physically exists and is being worn?
-- Is the lighting consistent across face, body, and environment?
-- Have I accidentally beautified, smoothed, or modified the face in any way?
-
-If any answer is NO, regenerate.
+- The new clothing must have natural fabric behavior (drape, fold, wrinkle)
+- Clothing must fit naturally on the person's actual body shape
+- Lighting on clothing must match the scene's existing light direction
+- Edges between skin and clothing must be clean and natural
+- The overall image should look like a real photograph, not a composite
 """
 
     def render_style_transfer(
