@@ -17,6 +17,7 @@ from limiter import limiter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    config.validate_config()
     await init_db()
     config.UPLOAD_DIR.mkdir(exist_ok=True)
     yield
@@ -45,9 +46,4 @@ app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
 
 # ── Static file mounts (order matters) ──────────────────────────────
 config.UPLOAD_DIR.mkdir(exist_ok=True)
-app.mount(
-    "/api/uploads",
-    StaticFiles(directory=str(config.UPLOAD_DIR)),
-    name="uploads",
-)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

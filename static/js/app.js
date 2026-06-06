@@ -51,13 +51,26 @@ function getCurrentSession() {
   return state.sessions.find(s => s.id === state.currentSessionId) || null;
 }
 
+function getSessionById(sessionId) {
+  return state.sessions.find(s => s.id === sessionId) || null;
+}
+
 function getSessionMessages() {
   const session = getCurrentSession();
   return session ? session.messages : [];
 }
 
+function getSessionMessagesById(sessionId) {
+  const session = getSessionById(sessionId);
+  return session ? session.messages : [];
+}
+
 function pushMessage(msg) {
-  const session = getCurrentSession();
+  return pushMessageToSession(state.currentSessionId, msg);
+}
+
+function pushMessageToSession(sessionId, msg) {
+  const session = getSessionById(sessionId);
   if (!session) return;
   session.messages.push(msg);
   if (!session.preview && msg.role === 'user' && msg.text) {
@@ -65,6 +78,7 @@ function pushMessage(msg) {
   }
   saveSessions();
   renderSidebarHistory();
+  return session;
 }
 
 function saveSessions() {
@@ -225,7 +239,7 @@ async function init() {
   state.token = LS.get('fashion_token');
   state.user = LS.get('fashion_user');
   loadSessions();
-  state.selectedClothingTypes = LS.get('fashion_clothing_types') || [];
+  state.selectedClothingTypes = [];
   state.selectedStyles = LS.get('fashion_styles') || [];
   state.selectedScenes = LS.get('fashion_scenes') || [];
   state.path = LS.get('fashion_path');
@@ -317,15 +331,6 @@ $('register-form').addEventListener('submit', async (e) => {
     nickname: $('reg-nickname').value.trim(),
     password: $('reg-password').value,
   };
-  const h = parseFloat($('reg-height').value);
-  const w = parseFloat($('reg-weight').value);
-  if (h > 0) body.height = h;
-  if (w > 0) body.weight = w;
-  ['bust','waist','hip'].forEach(k => {
-    const v = parseFloat($('reg-' + k).value);
-    if (v > 0) body[k] = v;
-  });
-
   try {
     const res = await fetch('/api/user/register', {
       method: 'POST',
@@ -358,16 +363,18 @@ $('register-form').addEventListener('submit', async (e) => {
 function showHome() {
   showSidebar();
   showView('view-home');
-  $('home-nickname').textContent = state.user?.nickname || '';
+  if ($('home-nickname')) $('home-nickname').textContent = state.user?.nickname || '';
   renderSidebarHistory();
 }
 
-$('btn-logout').addEventListener('click', async () => {
-  await fetch('/api/user/logout', { method: 'POST' });
-  state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], sessions: [], currentSessionId: null };
-  ['fashion_token','fashion_user','fashion_sessions','fashion_current_session','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
-  showLogin();
-});
+if ($('btn-logout')) {
+  $('btn-logout').addEventListener('click', async () => {
+    await fetch('/api/user/logout', { method: 'POST' });
+    state = { user: null, token: null, path: null, selectedClothingTypes: [], selectedStyles: [], selectedScenes: [], sessions: [], currentSessionId: null };
+    ['fashion_token','fashion_user','fashion_sessions','fashion_current_session','fashion_clothing_types','fashion_styles','fashion_scenes','fashion_path'].forEach(k => LS.remove(k));
+    showLogin();
+  });
+}
 
 // Path selection
 $('btn-path-a').addEventListener('click', () => { state.path = 'a'; LS.set('fashion_path','a'); showPathA(); });
@@ -378,7 +385,13 @@ $('btn-path-b').addEventListener('click', () => { state.path = 'b'; LS.set('fash
 // ═══════════════════════════════════════════════════════════════════
 
 function showPathA() {
-  createSession('a');
+  const current = getCurrentSession();
+  if (!current || current.path !== 'a' || current.messages.length > 0) {
+    createSession('a');
+  } else {
+    current.path = 'a';
+    saveSessions();
+  }
   showSidebar();
   showView('view-path-a');
   $('text-a').value = '';
@@ -410,26 +423,20 @@ $('btn-generate-a').addEventListener('click', async () => {
 
   await doGenerate({
     text,
+    user_photo_url: userUrl,
+    outfit_reference_url: refUrl,
     user_image_url: userUrl,
     reference_image_url: refUrl,
+    path: 'a',
+    reference_strength: 'very_strict',
     style_tags: [],
     scene_tags: [],
   }, 'a');
 });
 
-$('btn-skip-a1').addEventListener('click', () => { if (cameraA1) cameraA1.clearImage(); });
-$('btn-skip-a2').addEventListener('click', () => { if (cameraA2) cameraA2.clearImage(); });
-
 // ═══════════════════════════════════════════════════════════════════
 //  PATH B — single page: upload + tag sections + text box
 // ═══════════════════════════════════════════════════════════════════
-
-const CLOTHING_TYPE_TAGS = [
-  'T恤', '衬衫', '卫衣', '针织衫', '西装外套', '风衣', '大衣',
-  '连衣裙', '半身裙', '牛仔裤', '阔腿裤', '短裤', '背心',
-  '吊带', '马甲', '羽绒服', '夹克', '运动套装',
-  'Polo衫', '棉麻衫',
-];
 
 const STYLE_TAGS = [
   '简约', '街头', '复古', '日系', '韩系', '欧美', '法式', '学院',
@@ -466,7 +473,13 @@ function buildTagGrid(containerId, tags, selectedSet, storageKey) {
 }
 
 function showPathB() {
-  createSession('b');
+  const current = getCurrentSession();
+  if (!current || current.path !== 'b' || current.messages.length > 0) {
+    createSession('b');
+  } else {
+    current.path = 'b';
+    saveSessions();
+  }
   showSidebar();
   showView('view-path-b');
   $('text-b').value = '';
@@ -476,18 +489,13 @@ function showPathB() {
   if (!cameraB) { cameraB = new CameraInstance('b'); cameraB.start(); }
   else { cameraB.clearImage(); cameraB.start(); }
 
-  state.selectedClothingTypes = new Set(LS.get('fashion_clothing_types') || []);
+  state.selectedClothingTypes = new Set();
   state.selectedStyles = new Set(LS.get('fashion_styles') || []);
   state.selectedScenes = new Set(LS.get('fashion_scenes') || []);
 
-  buildTagGrid('clothing-type-tags', CLOTHING_TYPE_TAGS, state.selectedClothingTypes, 'fashion_clothing_types');
   buildTagGrid('style-tags', STYLE_TAGS, state.selectedStyles, 'fashion_styles');
   buildTagGrid('scene-tags', SCENE_TAGS, state.selectedScenes, 'fashion_scenes');
 }
-
-$('btn-skip-b').addEventListener('click', () => {
-  if (cameraB) cameraB.clearImage();
-});
 
 $('btn-generate-b').addEventListener('click', async () => {
   const refUrl = cameraB ? await cameraB.getImageUrl() : null;
@@ -495,8 +503,10 @@ $('btn-generate-b').addEventListener('click', async () => {
 
   await doGenerate({
     text: text || null,
+    outfit_reference_url: refUrl || null,
     reference_image_url: refUrl || null,
-    clothing_tags: [...state.selectedClothingTypes],
+    path: 'b',
+    reference_strength: 'inspiration',
     style_tags: [...state.selectedStyles],
     scene_tags: [...state.selectedScenes],
   }, 'b');
@@ -507,30 +517,23 @@ $('btn-generate-b').addEventListener('click', async () => {
 // ═══════════════════════════════════════════════════════════════════
 
 async function doGenerate(body, pathKey) {
+  const sessionId = state.currentSessionId;
   const overlay = $('loading-overlay');
   overlay.classList.remove('hidden');
 
   try {
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
+    const data = await createAndPollGenerationJob(body);
 
-    if (!res.ok) throw new Error(data.detail || '生成失败');
-
-    pushMessage({
+    pushMessageToSession(sessionId, {
       id: data.conversation_id,
       role: 'user',
       text: body.text,
-      image_url: body.reference_image_url,
-      clothing_tags: body.clothing_tags,
+      image_url: body.user_photo_url || body.user_image_url || body.outfit_reference_url || body.reference_image_url || body.base_image_url,
       style_tags: body.style_tags,
       scene_tags: body.scene_tags,
       created_at: new Date().toISOString(),
     });
-    pushMessage({
+    pushMessageToSession(sessionId, {
       id: data.conversation_id + 1,
       role: 'assistant',
       image_url: data.image_url,
@@ -539,7 +542,9 @@ async function doGenerate(body, pathKey) {
       created_at: new Date().toISOString(),
     });
 
-    showResult(data.image_url, data.original_url);
+    if (state.currentSessionId === sessionId) {
+      showResult(data.image_url, data.original_url, data.job_id);
+    }
   } catch (err) {
     const statusEl = pathKey === 'a' ? $('status-a') : $('status-b');
     statusEl.textContent = '生成失败: ' + err.message;
@@ -549,15 +554,39 @@ async function doGenerate(body, pathKey) {
   }
 }
 
+async function createAndPollGenerationJob(body, opts = {}) {
+  const timeoutMs = opts.timeoutMs || 120000;
+  const intervalMs = opts.intervalMs || 2000;
+  const createRes = await fetch('/api/generation-jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const created = await createRes.json();
+  if (!createRes.ok) throw new Error(created.detail || '任务创建失败');
+
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    const statusRes = await fetch('/api/generation-jobs/' + created.job_id);
+    const status = await statusRes.json();
+    if (!statusRes.ok) throw new Error(status.detail || '任务查询失败');
+    if (status.status === 'succeeded') return status.result;
+    if (status.status === 'failed') throw new Error(status.error_message || '生成失败');
+  }
+  throw new Error('生成任务超时，请稍后查看历史记录');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  RESULT VIEW — display image + chat
 // ═══════════════════════════════════════════════════════════════════
 
-function showResult(imageUrl, originalUrl) {
+function showResult(imageUrl, originalUrl, jobId) {
   showSidebar();
   showView('view-result');
   $('result-img').src = imageUrl;
   $('result-img').dataset.originalUrl = originalUrl || imageUrl;
+  if (jobId) $('result-img').dataset.jobId = jobId;
   $('chat-input').value = '';
   $('chat-status').textContent = '';
   $('chat-status').className = 'status-message';
@@ -604,26 +633,27 @@ function renderChat() {
 $('btn-chat-send').addEventListener('click', async () => {
   const text = $('chat-input').value.trim();
   if (!text) return;
+  const sessionId = state.currentSessionId;
+  const sessionPath = state.path || getSessionById(sessionId)?.path || null;
 
   const overlay = $('loading-overlay');
   overlay.classList.remove('hidden');
   $('chat-input').value = '';
 
   // Show user message immediately
-  pushMessage({ role: 'user', text, created_at: new Date().toISOString() });
-  renderChat();
+  pushMessageToSession(sessionId, { role: 'user', text, created_at: new Date().toISOString() });
+  if (state.currentSessionId === sessionId) renderChat();
 
   try {
     // Step 1: Ask dialogue model to classify intent
-    const history = getSessionMessages().slice(-6).map(m => ({ role: m.role, text: m.text || '' }));
+    const history = getSessionMessagesById(sessionId).slice(-6).map(m => ({ role: m.role, text: m.text || '' }));
     const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
         history,
-        path: state.path || null,
-        clothing_tags: LS.get('fashion_clothing_types') || [],
+        path: sessionPath,
         style_tags: LS.get('fashion_styles') || [],
         scene_tags: LS.get('fashion_scenes') || [],
       }),
@@ -634,28 +664,29 @@ $('btn-chat-send').addEventListener('click', async () => {
     if (chatData.action === 'generate') {
       // Show confirmation text from dialogue model
       if (chatData.text) {
-        pushMessage({ role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
-        renderChat();
+        pushMessageToSession(sessionId, { role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
+        if (state.currentSessionId === sessionId) renderChat();
       }
 
       // Step 2: Trigger image generation using enriched prompt
       const lastImage = $('result-img').dataset.originalUrl || null;
+      const previousJobId = $('result-img').dataset.jobId ? parseInt($('result-img').dataset.jobId, 10) : null;
       const genText = chatData.prompt || text;
-      const genRes = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: genText,
-          user_image_url: lastImage,
-          clothing_tags: LS.get('fashion_clothing_types') || [],
-          style_tags: LS.get('fashion_styles') || [],
-          scene_tags: LS.get('fashion_scenes') || [],
-        }),
+      const genData = await createAndPollGenerationJob({
+        text: genText,
+        base_image_url: lastImage,
+        previous_result_url: lastImage,
+        previous_job_id: previousJobId,
+        chat_intent: chatData.intent ? { intent: chatData.intent, text } : null,
+        patch: chatData.patch || null,
+        constraints: chatData.constraints || null,
+        path: 'chat',
+        reference_strength: 'inspiration',
+        style_tags: LS.get('fashion_styles') || [],
+        scene_tags: LS.get('fashion_scenes') || [],
       });
-      const genData = await genRes.json();
-      if (!genRes.ok) throw new Error(genData.detail || '生成失败');
 
-      pushMessage({
+      pushMessageToSession(sessionId, {
         role: 'assistant',
         image_url: genData.image_url,
         original_url: genData.original_url,
@@ -663,14 +694,17 @@ $('btn-chat-send').addEventListener('click', async () => {
         created_at: new Date().toISOString(),
       });
 
-      $('result-img').src = genData.image_url;
-      $('result-img').dataset.originalUrl = genData.original_url;
+      if (state.currentSessionId === sessionId) {
+        $('result-img').src = genData.image_url;
+        $('result-img').dataset.originalUrl = genData.original_url;
+        if (genData.job_id) $('result-img').dataset.jobId = genData.job_id;
+      }
     } else {
       // Pure reply — no image generation
-      pushMessage({ role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
+      pushMessageToSession(sessionId, { role: 'assistant', text: chatData.text, created_at: new Date().toISOString() });
     }
 
-    renderChat();
+    if (state.currentSessionId === sessionId) renderChat();
   } catch (err) {
     $('chat-status').textContent = err.message;
     $('chat-status').className = 'status-message show error';

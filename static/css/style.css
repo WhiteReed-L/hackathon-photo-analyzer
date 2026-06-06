@@ -273,6 +273,13 @@ body.has-sidebar #main-content { margin-left: 220px; }
 body.has-sidebar .sidebar.collapsed ~ #main-content,
 body:has(.sidebar.collapsed) #main-content { margin-left: 56px; }
 
+/* Sidebar overlays content; expand/collapse should not move the main UI. */
+body.has-sidebar #main-content,
+body.has-sidebar .sidebar.collapsed ~ #main-content,
+body:has(.sidebar.collapsed) #main-content {
+  margin-left: 0;
+}
+
 /* ===== Header / Nav ===== */
 .header {
   display: flex;
@@ -972,7 +979,72 @@ body:has(.sidebar.collapsed) #main-content { margin-left: 56px; }
 
 @media (max-width: 640px) {
   body.has-sidebar #main-content { margin-left: 0; }
-  .sidebar { display: none; }
+  #view-home .header { justify-content: flex-end; }
+  #view-home .header-logo {
+    text-align: right;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    height: 56px;
+  }
+  #view-path-a .header,
+  #view-path-b .header {
+    justify-content: center;
+    position: sticky;
+  }
+  #view-path-a .header-logo,
+  #view-path-b .header-logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+  #view-path-a .header-nav,
+  #view-path-b .header-nav {
+    margin-left: auto;
+  }
+  .sidebar {
+    display: flex;
+    width: min(82vw, 280px);
+    box-shadow: 0 0 0 1px var(--hairline), 0 8px 24px rgba(0, 0, 0, 0.12);
+    background: var(--canvas);
+  }
+  .sidebar.hidden { display: none !important; }
+  .sidebar.collapsed {
+    display: flex;
+    width: 56px;
+    min-height: 56px;
+    height: 56px;
+    bottom: auto;
+    border-right: none;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+  }
+  .sidebar.collapsed .sidebar-body { display: none; }
+  .sidebar.collapsed .sidebar-header {
+    padding: 0 8px;
+    height: 56px;
+    min-height: 56px;
+    align-items: center;
+    justify-content: flex-start;
+    background: transparent;
+  }
+  .sidebar.collapsed .sidebar-brand { font-size: 0; display: none; }
+  .sidebar.collapsed .sidebar-item { display: none; }
+  .sidebar.collapsed .history-group-title,
+  .sidebar.collapsed .history-item-label,
+  .sidebar.collapsed .history-item-delete { display: none; }
+  .sidebar.collapsed .sidebar-divider { display: none; }
+  .sidebar.collapsed .sidebar-toggle {
+    transform: rotate(180deg);
+    font-size: 12px;
+    height: 36px;
+    width: 36px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-sm);
+  }
 
   .camera-page { padding: var(--space-xl) var(--space-lg); }
   .camera-page h1 { font-size: 18px; }

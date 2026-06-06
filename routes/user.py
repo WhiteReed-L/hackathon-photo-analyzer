@@ -1,8 +1,11 @@
 import hashlib
 import secrets
+import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+import bcrypt
 
+import config
 from database import (
     create_session,
     create_user,
@@ -11,6 +14,7 @@ from database import (
     get_user_by_nickname,
     get_user_id_by_session,
 )
+from limiter import limiter
 from models import LoginRequest, LoginResponse, RegisterRequest, UserProfile
 
 router = APIRouter()
@@ -19,29 +23,42 @@ SESSION_MAX_AGE = 86400
 
 
 def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(password: str, stored_hash: str) -> bool:
+    if stored_hash.startswith("$2"):
+        return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
+    # Backward compatibility for legacy SHA256 hashes.
+    return hashlib.sha256(password.encode()).hexdigest() == stored_hash
 
 
 # ── Register ─────────────────────────────────────────────────────────
 
 @router.post("/user/register", response_model=LoginResponse)
-async def register(body: RegisterRequest, response: Response):
+@limiter.limit(config.AUTH_RATE_LIMIT)
+async def register(request: Request, body: RegisterRequest, response: Response):
     if not body.nickname or not body.password:
         raise HTTPException(status_code=400, detail="昵称和密码不能为空")
+    if len(body.password) < 8:
+        raise HTTPException(status_code=400, detail="密码至少需要 8 位")
 
     existing = await get_user_by_nickname(body.nickname)
     if existing:
         raise HTTPException(status_code=409, detail="昵称已被注册")
 
-    user_id = await create_user(
-        nickname=body.nickname,
-        password_hash=_hash_password(body.password),
-        height=body.height or 0,
-        weight=body.weight or 0,
-        bust=body.bust,
-        waist=body.waist,
-        hip=body.hip,
-    )
+    try:
+        user_id = await create_user(
+            nickname=body.nickname,
+            password_hash=_hash_password(body.password),
+            height=body.height or 0,
+            weight=body.weight or 0,
+            bust=body.bust,
+            waist=body.waist,
+            hip=body.hip,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="昵称已被注册")
 
     token = secrets.token_urlsafe(32)
     await create_session(token, user_id)
@@ -50,6 +67,7 @@ async def register(body: RegisterRequest, response: Response):
         value=token,
         httponly=True,
         samesite="strict",
+        secure=config.COOKIE_SECURE,
         max_age=SESSION_MAX_AGE,
     )
 
@@ -60,9 +78,10 @@ async def register(body: RegisterRequest, response: Response):
 # ── Login ────────────────────────────────────────────────────────────
 
 @router.post("/user/login", response_model=LoginResponse)
-async def login(body: LoginRequest, response: Response):
+@limiter.limit(config.AUTH_RATE_LIMIT)
+async def login(request: Request, body: LoginRequest, response: Response):
     user = await get_user_by_nickname(body.nickname)
-    if not user or user["password_hash"] != _hash_password(body.password):
+    if not user or not _verify_password(body.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="昵称或密码错误")
 
     token = secrets.token_urlsafe(32)
@@ -72,6 +91,7 @@ async def login(body: LoginRequest, response: Response):
         value=token,
         httponly=True,
         samesite="strict",
+        secure=config.COOKIE_SECURE,
         max_age=SESSION_MAX_AGE,
     )
 
@@ -86,7 +106,7 @@ async def logout(request: Request, response: Response):
     token = request.cookies.get("fashion_token")
     if token:
         await delete_session(token)
-    response.delete_cookie(key="fashion_token", path="/", httponly=True, samesite="strict")
+    response.delete_cookie(key="fashion_token", path="/", httponly=True, samesite="strict", secure=config.COOKIE_SECURE)
     return {"success": True, "message": "已登出"}
 
 

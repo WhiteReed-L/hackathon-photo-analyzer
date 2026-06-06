@@ -46,8 +46,19 @@ class UserProfile(BaseModel):
 
 class GenerateRequest(BaseModel):
     text: str | None = ""
-    user_image_url: str | None = None        # user's own photo
-    reference_image_url: str | None = None   # outfit reference photo
+    # New explicit image semantics. Legacy fields below remain supported.
+    user_photo_url: str | None = None        # user's own photo for identity/base edit
+    outfit_reference_url: str | None = None  # outfit/clothing reference, not the person to edit
+    base_image_url: str | None = None        # current image to edit, e.g. previous result
+    previous_result_url: str | None = None   # previous generated result for multi-turn editing
+    user_image_url: str | None = None        # legacy alias for user_photo_url
+    reference_image_url: str | None = None   # legacy alias for outfit_reference_url/base image in old clients
+    path: str | None = None                  # "a" strict reference try-on, "b" inspiration generation
+    reference_strength: str | None = None    # "strict" or "inspiration"
+    previous_job_id: int | None = None
+    chat_intent: dict | None = None
+    patch: dict | None = None
+    constraints: dict | None = None
     clothing_tags: list[str] | None = None   # clothing type preferences
     style_tags: list[str] | None = None
     scene_tags: list[str] | None = None
@@ -59,6 +70,19 @@ class GenerateResponse(BaseModel):
     revised_prompt: str
     description: str     # user-facing outfit description (color, style, material)
     conversation_id: int
+    job_id: int | None = None
+
+
+class GenerationJobCreateResponse(BaseModel):
+    job_id: int
+    status: str
+
+
+class GenerationJobStatusResponse(BaseModel):
+    job_id: int
+    status: str
+    result: dict | None = None
+    error_message: str | None = None
 
 
 # ── Conversation ─────────────────────────────────────────────────────
@@ -92,7 +116,10 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     action: str   # "reply" or "generate"
     text: str
-    prompt: str | None = None  # enriched prompt for image generation
+    intent: str | None = None
+    patch: dict | None = None
+    constraints: dict | None = None
+    prompt: str | None = None  # legacy compatibility
 
 
 # ── Error ────────────────────────────────────────────────────────────

@@ -4,22 +4,10 @@ import io
 from pathlib import Path
 
 from PIL import Image
-from openai import AsyncOpenAI
 
 import config
+from services.ai_client import default_client
 from services.prompt_engine import PromptEngine
-
-_client: AsyncOpenAI | None = None
-
-
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
-        )
-    return _client
 
 
 _MAX_VISION_PX = 2048
@@ -81,7 +69,7 @@ async def analyze_photos(
             "has_reference": bool,
         }
     """
-    client = _get_client()
+    client = default_client()
     engine = PromptEngine()
 
     has_user_photo = bool(user_photo_path and Path(user_photo_path).exists())

@@ -2,27 +2,14 @@
 import asyncio
 import base64
 import uuid
-from pathlib import Path
 
-import aiofiles
 import httpx
 from PIL import Image
-from openai import AsyncOpenAI
 
 import config
+from services.ai_client import default_client
 from services.prompt_engine import PromptEngine
-
-_client: AsyncOpenAI | None = None
-
-
-def _get_client() -> AsyncOpenAI:
-    global _client
-    if _client is None:
-        _client = AsyncOpenAI(
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_BASE_URL,
-        )
-    return _client
+from services.storage import storage
 
 
 DEFAULT_COMPOSITION = """\
@@ -40,9 +27,30 @@ def build_final_prompt(
     identity_features: str,
     style_directive: str,
     composition_settings: str = DEFAULT_COMPOSITION,
+    mode: str = "user_photo_edit",
+    reference_strength: str = "inspiration",
 ) -> str:
-    """Render the final style-transfer prompt via PromptEngine."""
+    """Render the final prompt using the correct generation-mode template."""
     engine = PromptEngine()
+    if mode == "previous_result_edit":
+        return engine.render_previous_result_edit(
+            identity_features=identity_features,
+            style_directive=style_directive,
+            composition_settings=composition_settings,
+        )
+    if mode == "reference_outfit_generation":
+        return engine.render_reference_outfit_generation(
+            identity_features=identity_features,
+            style_directive=style_directive,
+            composition_settings=composition_settings,
+            reference_strength=reference_strength,
+        )
+    if mode == "text_to_image_generation":
+        return engine.render_text_to_image_generation(
+            identity_features=identity_features,
+            style_directive=style_directive,
+            composition_settings=composition_settings,
+        )
     return engine.render_style_transfer(
         identity_features=identity_features,
         style_directive=style_directive,
@@ -94,10 +102,7 @@ async def _save_generation_result(data, prompt: str, prefix: str = "") -> dict:
         async with httpx.AsyncClient() as client_http:
             resp = await client_http.get(data.url)
             resp.raise_for_status()
-        filename = f"{prefix}{uuid.uuid4()}.png"
-        file_path = config.UPLOAD_DIR / filename
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(resp.content)
+        filename, file_path = await storage.save_bytes(resp.content, suffix=".png", prefix=prefix)
         return {
             "image_url": f"/api/uploads/{filename}",
             "local_path": str(file_path),
@@ -105,10 +110,7 @@ async def _save_generation_result(data, prompt: str, prefix: str = "") -> dict:
         }
 
     if data.b64_json:
-        filename = f"{prefix}{uuid.uuid4()}.png"
-        file_path = config.UPLOAD_DIR / filename
-        with open(file_path, "wb") as f:
-            f.write(base64.b64decode(data.b64_json))
+        filename, file_path = await storage.save_bytes(base64.b64decode(data.b64_json), suffix=".png", prefix=prefix)
         return {
             "image_url": f"/api/uploads/{filename}",
             "local_path": str(file_path),
@@ -128,7 +130,7 @@ async def generate_standard_portrait(identity_features: str) -> dict:
     engine = PromptEngine()
     prompt = engine.render_standard_portrait(identity_features)
 
-    response = await _get_client().images.generate(
+    response = await default_client().images.generate(
         model=config.OPENAI_MODEL,
         prompt=prompt,
         size=config.IMAGE_SIZE,
@@ -153,7 +155,7 @@ async def generate_styled_image(
     NOTE: images.edit does NOT accept 'quality' parameter for gpt-image-1.
     """
     with open(reference_image_path, "rb") as img_file:
-        response = await _get_client().images.edit(
+        response = await default_client().images.edit(
             image=img_file,
             prompt=prompt,
             model=config.OPENAI_MODEL,
@@ -174,7 +176,7 @@ async def generate_image(
     Fallback for cases where no user photo was uploaded and we have no
     standard portrait to use as reference.
     """
-    response = await _get_client().images.generate(
+    response = await default_client().images.generate(
         model=config.OPENAI_MODEL,
         prompt=prompt,
         size=config.IMAGE_SIZE,

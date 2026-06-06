@@ -318,6 +318,9 @@ Therefore, your output must be VISUALLY PRECISE and ACTIONABLE.
 ## OUTPUT FORMAT
 
 Respond ONLY in the following format. No conversational text.
+Keep the field names exactly as written in English, but write all field values
+in concise Chinese. The user-facing summary will only use clothing style,
+color, and material information, so make those fields clear and specific.
 
 ---STYLING BRIEF---
 Style Name: [2-4 words, evocative but clear]
@@ -364,13 +367,33 @@ Background Vibe: [brief scene suggestion that matches the style mood]
             传给 GPT-4o Text 的完整 Prompt，输出为结构化 Styling Brief
         """
         tags_str = ", ".join(tags) if tags else "none"
-        return self.STYLE_PARSER_TEMPLATE.format(
+        prompt = self.STYLE_PARSER_TEMPLATE.format(
             raw_text=raw_text.strip(),
             tags=tags_str,
             gender_hint=gender_hint,
             season_hint=season_hint,
             occasion_hint=occasion_hint,
         )
+        prompt += """
+
+## STRUCTURED JSON OUTPUT OVERRIDE
+
+Respond ONLY with valid JSON. Do not output markdown or the ---STYLING BRIEF--- text block.
+Use concise Chinese values. Required shape:
+{
+  "style_name": "中文风格名",
+  "overall_mood": "中文整体氛围",
+  "top_garment": {"type": "", "style": "", "color": "", "material": "", "fit": "", "details": ""},
+  "bottom_garment": {"type": "", "style": "", "color": "", "material": "", "fit": "", "details": ""},
+  "footwear": {"type": "", "style": "", "color": "", "material": "", "fit": "", "details": ""},
+  "accessories": [""],
+  "color_palette": ["颜色1", "颜色2", "颜色3"],
+  "materials": ["材质1", "材质2"],
+  "silhouette": "中文廓形描述",
+  "styling_notes": "中文搭配说明"
+}
+"""
+        return prompt
 
     # ============================================================
     # Step 2: Style Transfer (Final Styled Image)
@@ -461,6 +484,89 @@ photograph — NOT a full regeneration of the image.
 - The overall image should look like a real photograph, not a composite
 """
 
+    PREVIOUS_RESULT_EDIT_TEMPLATE: str = """\
+You are editing a previously generated fashion image. Apply ONLY the requested
+outfit changes while preserving everything else.
+
+## BASE IMAGE SEMANTICS
+
+The provided image is the CURRENT RESULT to be modified. It may already be an
+AI-generated styled image. Treat it as the base image for this edit.
+
+## IDENTITY / BODY ANCHOR
+{identity_features}
+
+## REQUESTED STYLE UPDATE
+{style_directive}
+
+## COMPOSITION PARAMETERS
+{composition_settings}
+
+## STRICT EDITING RULES
+- Modify only garments, accessories, colors, materials, or fit details required
+  by the Style Specification.
+- Keep all unspecified garments unchanged.
+- Preserve face, hair, body proportions, pose, background, lighting, camera
+  angle, and overall image composition.
+- Do NOT reinterpret the whole outfit from scratch unless the request explicitly
+  asks for a complete redesign.
+"""
+
+    REFERENCE_OUTFIT_GENERATION_TEMPLATE: str = """\
+You are generating a photorealistic fashion image using the provided image as
+an OUTFIT REFERENCE, not as the person's identity unless explicitly stated.
+
+## REFERENCE IMAGE SEMANTICS
+
+The provided image is primarily a clothing/style reference. Extract its garment
+types, colors, materials, silhouette, and styling relationships. Do NOT assume
+the person in the reference image is the user.
+
+## USER / BODY CONTEXT
+{identity_features}
+
+## STYLE SPECIFICATION
+{style_directive}
+
+## REFERENCE STRENGTH
+{reference_strength}
+
+If reference strength is "very_strict", treat the reference outfit as the
+dominant clothing source: preserve the visible garment categories, colors,
+materials, silhouette, layering, and styling details as closely as possible;
+only adapt fit to the target body/base image. If reference strength is
+"strict", preserve the key garments from the reference as faithfully as
+possible. If it is "inspiration", use the reference only as a style direction
+and prioritize the user's text and tags.
+
+## COMPOSITION PARAMETERS
+{composition_settings}
+
+Generate a coherent fashion result. Do not claim to preserve the face or pose of
+the reference image unless the reference is also the user's base image.
+"""
+
+    TEXT_TO_IMAGE_TEMPLATE: str = """\
+You are generating a new photorealistic full-body fashion image from text and
+user profile context. There is NO provided photograph to edit.
+
+## USER / BODY CONTEXT
+{identity_features}
+
+## STYLE SPECIFICATION
+{style_directive}
+
+## COMPOSITION PARAMETERS
+{composition_settings}
+
+## GENERATION RULES
+- Create a new realistic fashion image rather than editing an existing photo.
+- Use the body/profile context only to choose flattering fit and proportions.
+- Do not mention or rely on a provided photograph.
+- Render the clothing details accurately: garment type, cut, material, color,
+  silhouette, footwear, and accessories.
+"""
+
     def render_style_transfer(
         self,
         identity_features: str,
@@ -479,6 +585,44 @@ photograph — NOT a full regeneration of the image.
             可直接传给 OpenAI 图像生成 API 的完整 Prompt
         """
         return self.STYLE_TRANSFER_TEMPLATE.format(
+            identity_features=identity_features.strip(),
+            style_directive=style_directive.strip(),
+            composition_settings=composition_settings.strip(),
+        )
+
+    def render_previous_result_edit(
+        self,
+        identity_features: str,
+        style_directive: str,
+        composition_settings: str,
+    ) -> str:
+        return self.PREVIOUS_RESULT_EDIT_TEMPLATE.format(
+            identity_features=identity_features.strip(),
+            style_directive=style_directive.strip(),
+            composition_settings=composition_settings.strip(),
+        )
+
+    def render_reference_outfit_generation(
+        self,
+        identity_features: str,
+        style_directive: str,
+        composition_settings: str,
+        reference_strength: str = "inspiration",
+    ) -> str:
+        return self.REFERENCE_OUTFIT_GENERATION_TEMPLATE.format(
+            identity_features=identity_features.strip(),
+            style_directive=style_directive.strip(),
+            composition_settings=composition_settings.strip(),
+            reference_strength=reference_strength,
+        )
+
+    def render_text_to_image_generation(
+        self,
+        identity_features: str,
+        style_directive: str,
+        composition_settings: str,
+    ) -> str:
+        return self.TEXT_TO_IMAGE_TEMPLATE.format(
             identity_features=identity_features.strip(),
             style_directive=style_directive.strip(),
             composition_settings=composition_settings.strip(),
