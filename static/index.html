@@ -116,6 +116,7 @@
         <button class="btn btn-primary" id="btn-capture-a1">拍照</button>
         <button class="btn btn-outline hidden" id="btn-retake-a1">重拍</button>
         <button class="btn btn-outline" id="btn-file-a1">选择文件</button>
+        <button class="btn btn-outline" id="btn-scan-a1">扫码上传</button>
       </div>
     </div>
 
@@ -132,6 +133,7 @@
         <button class="btn btn-primary" id="btn-capture-a2">拍照</button>
         <button class="btn btn-outline hidden" id="btn-retake-a2">重拍</button>
         <button class="btn btn-outline" id="btn-file-a2">选择文件</button>
+        <button class="btn btn-outline" id="btn-scan-a2">扫码上传</button>
       </div>
     </div>
 
@@ -166,6 +168,7 @@
       <button class="btn btn-primary" id="btn-capture-b">拍照</button>
       <button class="btn btn-outline hidden" id="btn-retake-b">重拍</button>
       <button class="btn btn-outline" id="btn-file-b">选择文件</button>
+      <button class="btn btn-outline" id="btn-scan-b">扫码上传</button>
     </div>
 
     <!-- Unified text input -->
@@ -190,6 +193,15 @@
     </div>
     <div id="status-b" class="status-message"></div>
   </main>
+</div>
+
+<div id="qr-modal" class="modal-overlay hidden">
+  <div class="loading-card" style="max-width:360px;">
+    <p id="qr-title">扫码上传</p>
+    <img id="qr-img" alt="扫码上传二维码" style="width:220px;height:220px;background:#fff;margin:12px auto;display:block;">
+    <p id="qr-status">请用手机扫码上传图片</p>
+    <button class="btn btn-outline" id="qr-close" style="margin-top:12px;width:100%;">关闭</button>
+  </div>
 </div>
 
 <!-- ═══ VIEW: Result + conversation ═══ -->

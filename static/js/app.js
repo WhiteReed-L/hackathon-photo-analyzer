@@ -763,6 +763,7 @@ class CameraInstance {
     this.btnCapture = document.getElementById('btn-capture-' + s);
     this.btnRetake  = document.getElementById('btn-retake-' + s);
     this.btnFile    = document.getElementById('btn-file-' + s);
+    this.btnScan    = document.getElementById('btn-scan-' + s);
     this.captureInput = document.getElementById('capture-input-' + s);
     this.fileInput    = document.getElementById('file-input-' + s);
 
@@ -781,6 +782,9 @@ class CameraInstance {
       this.btnFile.addEventListener('click', () => {
         if (this.fileInput) this.fileInput.click();
       });
+    }
+    if (this.btnScan) {
+      this.btnScan.addEventListener('click', () => this.startScanUpload());
     }
     if (this.captureInput) {
       this.captureInput.addEventListener('change', (e) => this._handleFile(e.target.files[0]));
@@ -805,6 +809,54 @@ class CameraInstance {
   _showCaptured() {
     if (this.btnCapture) this.btnCapture.classList.add('hidden');
     if (this.btnRetake) this.btnRetake.classList.remove('hidden');
+  }
+
+  _showUploadedImage(imageUrl) {
+    this.imageUrl = imageUrl;
+    this.capturedBlob = null;
+    if (this._previewUrl) { URL.revokeObjectURL(this._previewUrl); this._previewUrl = null; }
+    this.preview.src = imageUrl;
+    this.preview.style.display = 'block';
+    this._showCaptured();
+  }
+
+  async startScanUpload() {
+    const modal = $('qr-modal');
+    const qrImg = $('qr-img');
+    const qrStatus = $('qr-status');
+    const qrTitle = $('qr-title');
+    if (!modal || !qrImg || !qrStatus) return;
+    qrTitle.textContent = '扫码上传图片';
+    qrStatus.textContent = '正在生成二维码...';
+    modal.classList.remove('hidden');
+    try {
+      const res = await fetch('/api/scan-upload/session', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || '二维码创建失败');
+      qrImg.src = data.qr_url + '?t=' + Date.now();
+      qrStatus.textContent = '请用手机扫码上传图片';
+
+      const started = Date.now();
+      const timer = setInterval(async () => {
+        if (Date.now() - started > data.expires_in * 1000) {
+          clearInterval(timer);
+          qrStatus.textContent = '二维码已过期，请重新生成';
+          return;
+        }
+        try {
+          const statusRes = await fetch('/api/scan-upload/' + data.token + '/status');
+          const status = await statusRes.json();
+          if (statusRes.ok && status.status === 'done' && status.image_url) {
+            clearInterval(timer);
+            this._showUploadedImage(status.image_url);
+            qrStatus.textContent = '上传成功';
+            setTimeout(() => modal.classList.add('hidden'), 600);
+          }
+        } catch {}
+      }, 1500);
+    } catch (err) {
+      qrStatus.textContent = err.message || '二维码创建失败';
+    }
   }
 
   start() {}
@@ -837,6 +889,10 @@ class CameraInstance {
     }
     return null;
   }
+}
+
+if ($('qr-close')) {
+  $('qr-close').addEventListener('click', () => $('qr-modal').classList.add('hidden'));
 }
 
 // ═══════════════════════════════════════════════════════════════════
